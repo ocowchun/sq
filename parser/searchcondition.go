@@ -108,7 +108,7 @@ func (p *Parser) parsePredicate() (ast.Predicate, error) {
 		if !p.currentTokenIs(token.TokenTypeLeftParen) {
 			return nil, newParserError(p.currentToken().Pos, fmt.Sprintf("expected `(` but got %s", p.currentToken()))
 		}
-		exprs := make([]ast.Expr, 0)
+		exprs := make([]*ast.LiteralExpr, 0)
 		if !p.currentTokenIs(token.TokenTypeRightParen) {
 			expr, err := p.parseExpr()
 			if err != nil {
@@ -120,7 +120,11 @@ func (p *Parser) parsePredicate() (ast.Predicate, error) {
 				if err != nil {
 					return nil, err
 				}
-				exprs = append(exprs, expr)
+				lit, ok := expr.(*ast.LiteralExpr)
+				if !ok {
+					return nil, newParserError(expr.Position(), "expected literal")
+				}
+				exprs = append(exprs, lit)
 			}
 		}
 

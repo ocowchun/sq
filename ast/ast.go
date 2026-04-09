@@ -49,7 +49,6 @@ const (
 	JoinTypeInnerJoin JoinType = iota
 	JoinTypeLeftJoin
 	JoinTypeRightJoin
-	JoinTypeFullJoin
 )
 
 type SearchCondition interface {
@@ -101,8 +100,8 @@ type InPredicate struct {
 	Pos  token.Position
 	Left Expr
 	Not  bool
-	// TODO: support a in (select b from c) later
-	Expressions []Expr
+	// TODO: Only support literal exp now
+	Expressions []*LiteralExpr
 }
 
 func (p *InPredicate) predicate()       {}
@@ -133,26 +132,3 @@ func (p *ExprPredicate) searchCondition() {}
 func (p *ExprPredicate) Position() token.Position {
 	return p.Expr.Position()
 }
-
-//type ComparisonOperator uint8
-//
-//const (
-//	ComparisonOperatorEqual ComparisonOperator = iota
-//	ComparisonOperatorNotEqual
-//	ComparisonOperatorLessThan
-//	ComparisonOperatorLessThanOrEqual
-//	ComparisonOperatorGreaterThan
-//	ComparisonOperatorGreaterThanOrEqual
-//	ComparisonOperatorIn
-//	ComparisonOperatorNotIn
-//	ComparisonOperatorLike
-//	ComparisonOperatorNotLike
-//)
-//
-//type ComparisonSearchCondition struct {
-//	LeftExpr  Expr
-//	RightExpr Expr
-//	Operator  ComparisonOperator
-//}
-//
-//func (c *ComparisonSearchCondition) SearchCondition() {}

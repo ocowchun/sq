@@ -1,6 +1,10 @@
 package ast
 
-import "github.com/ocowchun/sq/token"
+import (
+	"slices"
+
+	"github.com/ocowchun/sq/token"
+)
 
 type Expr interface {
 	exprNode()
@@ -21,6 +25,10 @@ const (
 	BinaryOpLess
 	BinaryOpLessEqual
 )
+
+func (op BinaryOp) IsIn(ops ...BinaryOp) bool {
+	return slices.Contains(ops, op)
+}
 
 type IdentifierExpr struct {
 	Pos  token.Position

@@ -126,7 +126,7 @@ func (p *LikePredicate) searchCondition() {}
 type InPredicate struct {
 	Left  Expr
 	Not   bool
-	Exprs []Expr
+	Exprs []*LiteralExpr
 }
 
 func (p *InPredicate) predicate()       {}

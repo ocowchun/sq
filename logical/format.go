@@ -113,6 +113,14 @@ func formatExprList(exprs []Expr) string {
 	return "[" + strings.Join(parts, ", ") + "]"
 }
 
+func formatLiteralList(exprs []*LiteralExpr) string {
+	parts := make([]string, 0, len(exprs))
+	for _, expr := range exprs {
+		parts = append(parts, formatExpr(expr))
+	}
+	return "[" + strings.Join(parts, ", ") + "]"
+}
+
 func formatSearchCondition(condition SearchCondition) string {
 	switch cond := condition.(type) {
 	case *OrSearchCondition:
@@ -126,9 +134,9 @@ func formatSearchCondition(condition SearchCondition) string {
 		return "(" + formatExpr(cond.Left) + " like " + cond.Pattern + ")"
 	case *InPredicate:
 		if cond.Not {
-			return "(" + formatExpr(cond.Left) + " NOT IN " + formatExprList(cond.Exprs) + ")"
+			return "(" + formatExpr(cond.Left) + " NOT IN " + formatLiteralList(cond.Exprs) + ")"
 		}
-		return "(" + formatExpr(cond.Left) + " IN " + formatExprList(cond.Exprs) + ")"
+		return "(" + formatExpr(cond.Left) + " IN " + formatLiteralList(cond.Exprs) + ")"
 	case *IsNullPredicate:
 		if cond.Not {
 			return "(" + formatExpr(cond.Expression) + " IS NOT NULL)"

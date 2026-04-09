@@ -219,13 +219,18 @@ func lowerSearchCondition(searchCondition binder.SearchCondition, relationIDs ma
 		if err != nil {
 			return nil, err
 		}
-		exprs := make([]Expr, len(condition.Expressions))
+		exprs := make([]*LiteralExpr, len(condition.Expressions))
 		for i, e := range condition.Expressions {
 			expr, err := lowerExpr(e, relationIDs)
 			if err != nil {
 				return nil, err
 			}
-			exprs[i] = expr
+
+			lit, ok := expr.(*LiteralExpr)
+			if !ok {
+				return nil, fmt.Errorf("expected literal expression but got %T", expr)
+			}
+			exprs[i] = lit
 		}
 		return &InPredicate{
 			Left:  left,

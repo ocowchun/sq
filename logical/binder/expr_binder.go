@@ -68,13 +68,17 @@ func (b *exprBinder) bindSearchCondition(searchCondition ast.SearchCondition) (S
 			return nil, err
 		}
 
-		exprs := make([]Expr, len(sc.Expressions))
+		exprs := make([]*Literal, len(sc.Expressions))
 		for i, e := range sc.Expressions {
 			expr, err := b.bind(e)
 			if err != nil {
 				return nil, err
 			}
-			exprs[i] = expr
+			lit, ok := expr.(*Literal)
+			if !ok {
+				return nil, newBindError(e.Position(), "IN predicate only supports literal expressions")
+			}
+			exprs[i] = lit
 		}
 		return &InPredicate{
 			Left:        left,

@@ -1,5 +1,9 @@
 package catalog
 
+import (
+	"slices"
+)
+
 type ColumnType uint8
 
 const (
@@ -28,6 +32,10 @@ func (c ColumnType) String() string {
 	default:
 		return "unknown"
 	}
+}
+
+func (c ColumnType) IsIn(types ...ColumnType) bool {
+	return slices.Contains(types, c)
 }
 
 type Column struct {
