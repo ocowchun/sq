@@ -23,12 +23,14 @@ func Test_EvalSearchCondition(t *testing.T) {
 	bA.AppendValues([]int64{5, 12, 3, 3, 11}, nil)
 	bA.AppendNull()
 	colA := bA.NewArray()
+	defer colA.Release()
 
 	bB := array.NewStringBuilder(allocator)
 	defer bB.Release()
 	bB.AppendValues([]string{"andy timmons", "bela fleck", "chick corea", "david gilmour", "eric clapton"}, nil)
 	bB.AppendNull()
 	colB := bB.NewArray()
+	defer colB.Release()
 
 	testCases := []struct {
 		caseName  string
@@ -361,6 +363,7 @@ func Test_EvalSearchCondition(t *testing.T) {
 	}
 
 	batch := array.NewRecordBatch(schema, []arrow.Array{colA, colB}, int64(colA.Len()))
+	defer batch.Release()
 
 	eval := newEvaluator(allocator)
 

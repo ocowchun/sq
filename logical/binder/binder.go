@@ -93,8 +93,36 @@ func (b *Binder) bindSelect(statement *ast.SelectStatement, visibleCTEs map[stri
 		SelectExprs: selectExprs,
 		From:        from,
 		Where:       where,
+		Schema:      buildSchema(selectExprs),
 	}, nil
 }
+
+func buildSchema(items []SelectExpr) catalog.Schema {
+	schema := catalog.Schema{
+		Columns: make([]catalog.Column, 0, len(items)),
+	}
+	for _, item := range items {
+		name := item.Alias
+		if name == "" {
+			name = exprName(item.Expr)
+		}
+		schema.Columns = append(schema.Columns, catalog.Column{
+			Name: name,
+			Type: item.Expr.Type(),
+		})
+	}
+	return schema
+}
+
+func exprName(expr Expr) string {
+	switch e := expr.(type) {
+	case *ColumnRef:
+		return e.ColumnName
+	default:
+		return fmt.Sprintf("%T", expr)
+	}
+}
+
 func (b *Binder) bindSelectExprs(scope *scope, selectExprs []ast.SelectExpr) ([]SelectExpr, error) {
 	if len(selectExprs) == 0 {
 		return nil, fmt.Errorf("no select expressions found")
