@@ -12,6 +12,7 @@ import (
 	"github.com/apache/arrow-go/v18/arrow/memory"
 	"github.com/ocowchun/sq/ast"
 	"github.com/ocowchun/sq/catalog"
+	"github.com/ocowchun/sq/function"
 	"github.com/ocowchun/sq/logical"
 )
 
@@ -262,8 +263,151 @@ func (e *evaluator) evaluateExpr(expr logical.Expr, batch arrow.RecordBatch) Eva
 		return e.evaluateUnaryExpr(exp, batch)
 	case *logical.BinaryExpr:
 		return e.evaluateBinaryExpr(exp, batch)
+	case *logical.CallExpr:
+		return e.evaluateCallExpr(exp, batch)
 	default:
 		panic("unreachable")
+	}
+}
+
+func (e *evaluator) evaluateCallExpr(expr *logical.CallExpr, batch arrow.RecordBatch) EvaluatedResponse {
+	fun, ok := function.GetFunction(expr.Callee)
+	if !ok {
+		return EvaluatedResponse{err: fmt.Errorf("function %s not found", expr.Callee)}
+	}
+
+	argArray := make([]arrow.Array, len(expr.Args))
+
+	for i, arg := range expr.Args {
+		res := e.evaluateExpr(arg, batch)
+		if res.err != nil {
+			return EvaluatedResponse{
+				err: res.err,
+			}
+		}
+		argArray[i] = res.array
+	}
+
+	values := make([]*function.Value, int(batch.NumRows()))
+	for i := 0; i < int(batch.NumRows()); i++ {
+		args := make([]*function.Value, len(fun.Input()))
+		for argIndex, columnType := range fun.Input() {
+			v, err := toValue(argArray[argIndex], columnType, i)
+			if err != nil {
+				return EvaluatedResponse{
+					err: err,
+				}
+			}
+			args[argIndex] = v
+		}
+		val, err := fun.Run(args)
+		if err != nil {
+			return EvaluatedResponse{
+				err: err,
+			}
+		}
+		values[i] = val
+	}
+	switch fun.Output() {
+	case catalog.ColumnTypeInt:
+		builder := array.NewInt64Builder(e.allocator)
+		defer builder.Release()
+		for i := 0; i < len(values); i++ {
+			val := values[i]
+			if val.IsNull {
+				builder.AppendNull()
+			} else {
+				builder.Append(val.Value.(int64))
+			}
+		}
+		return EvaluatedResponse{
+			array:        builder.NewArray(),
+			responseType: catalog.ColumnTypeInt,
+			err:          nil,
+		}
+	case catalog.ColumnTypeDouble:
+		builder := array.NewFloat64Builder(e.allocator)
+		defer builder.Release()
+		for i := 0; i < len(values); i++ {
+			val := values[i]
+			if val.IsNull {
+				builder.AppendNull()
+			} else {
+				builder.Append(val.Value.(float64))
+			}
+		}
+		return EvaluatedResponse{
+			array:        builder.NewArray(),
+			responseType: catalog.ColumnTypeDouble,
+			err:          nil,
+		}
+	case catalog.ColumnTypeBool:
+		builder := array.NewBooleanBuilder(e.allocator)
+		defer builder.Release()
+		for i := 0; i < len(values); i++ {
+			val := values[i]
+			if val.IsNull {
+				builder.AppendNull()
+			} else {
+				builder.Append(val.Value.(bool))
+			}
+		}
+		return EvaluatedResponse{
+			array:        builder.NewArray(),
+			responseType: catalog.ColumnTypeBool,
+			err:          nil,
+		}
+	case catalog.ColumnTypeString:
+		builder := array.NewStringBuilder(e.allocator)
+		defer builder.Release()
+		for i := 0; i < len(values); i++ {
+			val := values[i]
+			if val.IsNull {
+				builder.AppendNull()
+			} else {
+				builder.Append(val.Value.(string))
+			}
+		}
+		return EvaluatedResponse{
+			array:        builder.NewArray(),
+			responseType: catalog.ColumnTypeString,
+			err:          nil,
+		}
+	default:
+		return EvaluatedResponse{
+			err: fmt.Errorf("unsupported return type: %s", fun.Output()),
+		}
+	}
+}
+
+func toValue(ary arrow.Array, dataType catalog.ColumnType, idx int) (*function.Value, error) {
+	switch dataType {
+	case catalog.ColumnTypeInt:
+		ay := ary.(*array.Int64)
+		if ay.IsNull(idx) {
+			return function.NewValue(nil, dataType, true), nil
+		}
+		return function.NewValue(ay.Value(idx), dataType, false), nil
+	case catalog.ColumnTypeDouble:
+		ay := ary.(*array.Float64)
+		if ay.IsNull(idx) {
+			return function.NewValue(nil, dataType, true), nil
+		}
+		return function.NewValue(ay.Value(idx), dataType, false), nil
+	case catalog.ColumnTypeBool:
+		ay := ary.(*array.Boolean)
+		if ay.IsNull(idx) {
+			return function.NewValue(nil, dataType, true), nil
+		}
+		return function.NewValue(ay.Value(idx), dataType, false), nil
+	case catalog.ColumnTypeString:
+		ay := ary.(*array.String)
+		if ay.IsNull(idx) {
+			return function.NewValue(nil, dataType, true), nil
+		}
+		return function.NewValue(ay.Value(idx), dataType, false), nil
+	default:
+		return nil, fmt.Errorf("invalid column type: %v", dataType)
 	}
 }
 

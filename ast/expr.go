@@ -120,3 +120,14 @@ func (e *QualifiedStarExpr) exprNode() {}
 func (e *QualifiedStarExpr) Position() token.Position {
 	return e.Pos
 }
+
+type CallExpr struct {
+	Pos    token.Position
+	Callee string
+	Args   []Expr
+}
+
+func (e *CallExpr) exprNode() {}
+func (e *CallExpr) Position() token.Position {
+	return e.Pos
+}

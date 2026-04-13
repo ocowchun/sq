@@ -306,6 +306,20 @@ func lowerExpr(expr binder.Expr, relationIDs map[string]string) (Expr, error) {
 			Right:      right,
 			ColumnType: e.ColumnType,
 		}, nil
+	case *binder.CallExpr:
+		args := make([]Expr, len(e.Args))
+		for i, arg := range e.Args {
+			a, err := lowerExpr(arg, relationIDs)
+			if err != nil {
+				return nil, err
+			}
+			args[i] = a
+		}
+		return &CallExpr{
+			Callee:     e.Callee,
+			Args:       args,
+			ColumnType: e.ColumnType,
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported expression type: %T", e)
 	}

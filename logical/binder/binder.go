@@ -281,11 +281,3 @@ func (b *Binder) lookupRelation(name string, visibleCTEs map[string]CTE, current
 		accessKind: table.AccessKind,
 	}, nil
 }
-
-//func (b *Binder) addRelation(name string, schema catalog.Schema, alias string, source tableSource) error {
-//	visibleName := name
-//	if alias != "" {
-//		visibleName = alias
-//	}
-//	if
-//}

@@ -40,10 +40,6 @@ func Test_ParseInvalidSQL(t *testing.T) {
 		if err == nil {
 			t.Fatal(err)
 		}
-
-		//if stmt != nil {
-		//	t.Fatal("expected no statement")
-		//}
 	}
 
 }
@@ -64,5 +60,20 @@ where key like "%.csv"
 	if stmt == nil {
 		t.Fatal("expected statement")
 	}
+}
 
+func Test_ParserWithFunction(t *testing.T) {
+	input := `
+select replace(key, "my-prefix/", "") as key
+from object
+`
+
+	stmt, err := Parse(input)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stmt == nil {
+		t.Fatal("expected statement")
+	}
 }

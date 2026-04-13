@@ -5,6 +5,7 @@ import (
 
 	"github.com/ocowchun/sq/ast"
 	"github.com/ocowchun/sq/catalog"
+	"github.com/ocowchun/sq/function"
 )
 
 type exprBinder struct {
@@ -125,6 +126,8 @@ func (b *exprBinder) bind(expr ast.Expr) (Expr, error) {
 		return b.bindUnary(e)
 	case *ast.BinaryExpr:
 		return b.bindBinaryExpr(e)
+	case *ast.CallExpr:
+		return b.bindCallExpr(e)
 	default:
 		return nil, fmt.Errorf("unsupported expression type: %T", expr)
 	}
@@ -225,4 +228,37 @@ func (b *exprBinder) columnRef(column *scopeColumn) Expr {
 		ColumnIndex: column.index,
 		ColumnType:  column.columnType,
 	}
+}
+
+func (b *exprBinder) bindCallExpr(expr *ast.CallExpr) (Expr, error) {
+	fun, ok := function.GetFunction(expr.Callee)
+	if !ok {
+		return nil, newBindError(expr.Position(), fmt.Sprintf("function %s not found", expr.Callee))
+	}
+
+	inputSpec := fun.Input()
+	if len(inputSpec) != len(expr.Args) {
+		message := fmt.Sprintf("function %s expects %d arguments but got %d", expr.Callee, len(inputSpec), len(expr.Args))
+		return nil, newBindError(expr.Position(), message)
+	}
+
+	args := make([]Expr, len(expr.Args))
+	for i, arg := range expr.Args {
+		a, err := b.bind(arg)
+		if err != nil {
+			return nil, err
+		}
+
+		if inputSpec[i] != a.Type() {
+			message := fmt.Sprintf("function %s expects arguments[%d] to be %s but got %s", expr.Callee, i, inputSpec[i], a.Type())
+			return nil, newBindError(expr.Position(), message)
+		}
+
+		args[i] = a
+	}
+	return &CallExpr{
+		Callee:     expr.Callee,
+		Args:       args,
+		ColumnType: fun.Output(),
+	}, nil
 }

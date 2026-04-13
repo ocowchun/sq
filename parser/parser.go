@@ -408,33 +408,26 @@ func (p *Parser) parseCall() (ast.Expr, error) {
 		return nil, err
 	}
 
-	//for {
-	//	if p.currentTokenIs(TokenTypeLeftParen) {
-	//		// foo()
-	//		_, err = p.consume(TokenTypeLeftParen, "expect `(` after callee")
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//		callee, err = p.finishCall(callee)
-	//	} else if p.currentTokenIs(TokenTypeDot) {
-	//		//foo.bar
-	//		_, err = p.consume(TokenTypeDot, "expect `.` after callee")
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//
-	//		name, err := p.consume(TokenTypeIdentifier, "expect property name after `.`")
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//		callee = &ast.GetExpression{
-	//			Object: callee,
-	//			Name:   name,
-	//		}
-	//	} else {
-	//		break
-	//	}
-	//}
+	if identifier, ok := callee.(*ast.IdentifierExpr); ok && p.currentTokenIs(token.TokenTypeLeftParen) {
+		p.advance()
+		args := make([]ast.Expr, 0)
+		for !p.currentTokenIs(token.TokenTypeRightParen) {
+			arg, err := p.parsePrimary()
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, arg)
+			if p.currentTokenIs(token.TokenTypeComma) {
+				p.advance()
+			}
+		}
+		p.advance()
+		return &ast.CallExpr{
+			Pos:    identifier.Pos,
+			Callee: identifier.Name,
+			Args:   args,
+		}, nil
+	}
 
 	return callee, nil
 }

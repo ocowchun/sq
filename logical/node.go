@@ -91,6 +91,17 @@ func (e *BinaryExpr) Type() catalog.ColumnType {
 	return e.ColumnType
 }
 
+type CallExpr struct {
+	Callee     string
+	Args       []Expr
+	ColumnType catalog.ColumnType
+}
+
+func (e *CallExpr) exprNode() {}
+func (e *CallExpr) Type() catalog.ColumnType {
+	return e.ColumnType
+}
+
 type SearchCondition interface {
 	searchCondition()
 }
