@@ -52,7 +52,11 @@ func (p *project) Next(ctx context.Context) NextResponse {
 	cols := make([]arrow.Array, 0, len(p.selectExprs))
 	eval := newEvaluator(p.allocator)
 	for i, expr := range p.selectExprs {
-		fields = append(fields, arrow.Field{Name: p.schema.Columns[i].Name, Type: toDataType(p.schema.Columns[i].Type)})
+		fields = append(fields, arrow.Field{
+			Name:     p.schema.Columns[i].Name,
+			Type:     toDataType(p.schema.Columns[i].Type),
+			Nullable: true,
+		})
 		exprRes := eval.evaluateExpr(expr.Expr, innerRes.Batch)
 		if exprRes.err != nil {
 			return NextResponse{Err: exprRes.err}

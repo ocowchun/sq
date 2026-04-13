@@ -2,10 +2,7 @@ package physical
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/apache/arrow-go/v18/arrow"
-	"github.com/apache/arrow-go/v18/arrow/array"
 	"github.com/apache/arrow-go/v18/arrow/compute"
 	"github.com/apache/arrow-go/v18/arrow/memory"
 	"github.com/ocowchun/sq/catalog"
@@ -62,40 +59,4 @@ func (f *filter) Next(ctx context.Context) NextResponse {
 
 func (f *filter) Schema() *catalog.Schema {
 	return &f.output
-}
-
-// select * from objects where a = b
-
-// Open() error
-// Next() NextResponse
-// Close() error
-// Schema() *catalog.Schema
-// how to do filter?
-func foo(batch arrow.RecordBatch, filter *logical.Filter) {
-	//predicate := filter.Predicate
-	eval := newEvaluator(memory.NewGoAllocator())
-	mask, err := eval.evaluateSearchCondition(filter.Predicate, batch)
-	if err != nil {
-		panic(err)
-	}
-	filtered, err := compute.FilterRecordBatch(
-		context.TODO(),
-		batch,
-		mask,
-		compute.DefaultFilterOptions(),
-	)
-	if err != nil {
-		panic(err)
-	}
-	defer filtered.Release()
-
-}
-
-func debugArray(ary *array.Boolean) {
-	//var sb strings.Builder
-	res := make([]bool, 0)
-	for i := 0; i < ary.Len(); i++ {
-		res = append(res, ary.Value(i))
-	}
-	fmt.Println(res)
 }

@@ -73,7 +73,7 @@ func (b *Binder) bindSelect(statement *ast.SelectStatement, visibleCTEs map[stri
 	}
 
 	scope := newScope()
-	from, err := b.bindFrom(scope, statement.From, visibleCTEs, currentCTE)
+	from, err := b.bindFrom(scope, statement.From, localCTEs, currentCTE)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +262,7 @@ func (b *Binder) lookupRelation(name string, visibleCTEs map[string]CTE, current
 		return relation{}, fmt.Errorf("recursive reference to CTE %s is not allowed", name)
 	}
 	if visibleCTEs != nil {
-		if cte, ok := visibleCTEs[currentCTE]; ok {
+		if cte, ok := visibleCTEs[name]; ok {
 			return relation{
 				name:   cte.Name,
 				schema: cte.Schema,
