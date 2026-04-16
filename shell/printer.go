@@ -13,6 +13,7 @@ type PrintMode uint8
 const (
 	PrintModeTable PrintMode = iota
 	PrintModeLine
+	PrintModeCsv
 )
 
 type Printer interface {
@@ -88,5 +89,54 @@ func (p *LinePrinter) Print() error {
 }
 
 func (p *LinePrinter) Close() error {
+	return nil
+}
+
+type CsvPrinter struct {
+	header []string
+	data   [][]string
+}
+
+func NewCsvPrinter() *CsvPrinter {
+	return &CsvPrinter{}
+}
+func (p *CsvPrinter) SetHeader(header []string) {
+	p.header = header
+}
+func (p *CsvPrinter) SetData(data [][]string) error {
+	if len(data) == 0 {
+		return nil
+	}
+
+	if len(data[0]) != len(p.header) {
+		message := fmt.Sprintf("header length mismatch: header has %d columns while has %d columns", len(p.header), len(data[0]))
+		return fmt.Errorf(message)
+	}
+	p.data = data
+	return nil
+}
+
+func (p *CsvPrinter) Print() error {
+	for i, field := range p.header {
+		if i > 0 {
+			fmt.Printf(",")
+		}
+		fmt.Printf(field)
+	}
+	fmt.Println()
+
+	for _, row := range p.data {
+		for i, cell := range row {
+			if i > 0 {
+				fmt.Printf(",")
+			}
+			fmt.Printf(cell)
+		}
+		fmt.Println()
+	}
+	return nil
+}
+
+func (p *CsvPrinter) Close() error {
 	return nil
 }

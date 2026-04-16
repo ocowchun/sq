@@ -1,7 +1,6 @@
 package shell
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -10,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/chzyer/readline"
-	"github.com/ocowchun/sq/queryexec"
 )
 
 const (
@@ -123,36 +121,7 @@ func (s *Shell) SetPrintMode(mode PrintMode) {
 	s.printMode = mode
 }
 
-func (s *Shell) PrintResult(iter *queryexec.Iterator) {
-
-	headers := make([]string, 0)
-	rows := make([][]string, 0)
-	for {
-		ctx := context.Background()
-		batch, err := iter.Next(ctx)
-		if err != nil {
-			fmt.Println("query error:", err)
-		}
-
-		if len(headers) == 0 {
-			for _, f := range batch.Schema().Fields() {
-				headers = append(headers, f.Name)
-			}
-		}
-
-		for i := 0; i < int(batch.NumRows()); i++ {
-			row := make([]string, len(batch.Columns()))
-			for j, column := range batch.Columns() {
-				row[j] = column.ValueStr(i)
-			}
-			rows = append(rows, row)
-		}
-
-		if !iter.HasNext() {
-			break
-		}
-	}
-
+func (s *Shell) PrintResult(headers []string, rows [][]string) {
 	if len(headers) == 0 {
 		fmt.Println("no rows found")
 		return
@@ -164,8 +133,13 @@ func (s *Shell) PrintResult(iter *queryexec.Iterator) {
 		printer = NewTablePrinter()
 	case PrintModeLine:
 		printer = NewLinePrinter()
+	case PrintModeCsv:
+		printer = NewCsvPrinter()
+	default:
+		panic("unknown PrintMode")
 	}
 	defer printer.Close()
+
 	printer.SetHeader(headers)
 	err := printer.SetData(rows)
 	if err != nil {
