@@ -23,16 +23,10 @@ Install the CLI:
 go install github.com/ocowchun/sq/cmd/sq@latest
 ```
 
-Example:
-
-```sh
-sq -e 'select key, size from objects where bucket_name = "my-bucket" and key like "logs/%"'
-```
-
 Execute a query:
 
 ```sh
-sq -e 'select key, size from objects where bucket_name = "my-bucket"'
+sq -e 'select key, size from objects where bucket_name = "my-bucket" and key like "logs/%"'
 ```
 
 Filter to a prefix:
@@ -55,7 +49,7 @@ from log_files
 '
 ```
 
-The `sq`` file also contains an interactive shell path with these behaviors:
+The `sq` file also contains an interactive shell path with these behaviors:
 
 - statements are submitted when they end with `;`
 - dot commands begin with `.`
