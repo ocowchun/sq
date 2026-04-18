@@ -47,6 +47,11 @@ func (e *QueryExec) Query(ctx context.Context, sql string) (*Iterator, error) {
 		hasNext: true,
 		state:   state,
 	}
+	err = iter.inner.Open()
+	if err != nil {
+		return nil, err
+	}
+
 	return iter, nil
 }
 
@@ -74,13 +79,18 @@ func (i *Iterator) Next(ctx context.Context) (arrow.RecordBatch, error) {
 }
 
 func (i *Iterator) Close() error {
-
-	return nil
+	return i.inner.Close()
 }
 
 func (e *QueryExec) runCTESetupTasks(ctx context.Context, task *physical.CTESetupTask, state *physical.ExecutionState) error {
 	// TODO: clean batch when error
 	batches := make([]arrow.RecordBatch, 0)
+	err := task.Iterator.Open()
+	if err != nil {
+		return err
+	}
+	defer task.Iterator.Close()
+
 	for {
 		nextRes := task.Iterator.Next(ctx)
 		if nextRes.Err != nil {
@@ -93,7 +103,7 @@ func (e *QueryExec) runCTESetupTasks(ctx context.Context, task *physical.CTESetu
 			break
 		}
 	}
-	err := state.RegisterCTE(task.Name, task.Schema, batches)
+	err = state.RegisterCTE(task.Name, task.Schema, batches)
 	if err != nil {
 		return err
 	}

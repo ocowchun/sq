@@ -8,6 +8,8 @@ import (
 )
 
 type Iterator interface {
+	Open() error
+	Close() error
 	Next(ctx context.Context) NextResponse
 	Schema() *catalog.Schema
 }
@@ -17,3 +19,5 @@ type NextResponse struct {
 	Err     error
 	HasNext bool
 }
+
+const batchSize = 100

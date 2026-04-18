@@ -847,28 +847,41 @@ func (e *evaluator) evaluateUnaryExpr(expr *logical.UnaryExpr, batch arrow.Recor
 }
 
 func (e *evaluator) evaluateColumnRef(expr *logical.ColumnRef, batch arrow.RecordBatch) EvaluatedResponse {
+	columnIndex := -1
+	for i, field := range batch.Schema().Fields() {
+		if field.Name == expr.CanonicalColumnName() {
+			columnIndex = i
+			break
+		}
+	}
+	if columnIndex == -1 {
+		return EvaluatedResponse{
+			err: fmt.Errorf("column not found: %s", expr.CanonicalColumnName()),
+		}
+	}
+
 	switch expr.ColumnType {
 	case catalog.ColumnTypeString:
 		return EvaluatedResponse{
-			array:        batch.Column(expr.ColumnIndex).(*array.String),
+			array:        batch.Column(columnIndex).(*array.String),
 			responseType: catalog.ColumnTypeString,
 			err:          nil,
 		}
 	case catalog.ColumnTypeInt:
 		return EvaluatedResponse{
-			array:        batch.Column(expr.ColumnIndex).(*array.Int64),
+			array:        batch.Column(columnIndex).(*array.Int64),
 			responseType: catalog.ColumnTypeInt,
 			err:          nil,
 		}
 	case catalog.ColumnTypeDouble:
 		return EvaluatedResponse{
-			array:        batch.Column(expr.ColumnIndex).(*array.Float64),
+			array:        batch.Column(columnIndex).(*array.Float64),
 			responseType: catalog.ColumnTypeDouble,
 			err:          nil,
 		}
 	case catalog.ColumnTypeBool:
 		return EvaluatedResponse{
-			array:        batch.Column(expr.ColumnIndex).(*array.Boolean),
+			array:        batch.Column(columnIndex).(*array.Boolean),
 			responseType: catalog.ColumnTypeBool,
 			err:          nil,
 		}

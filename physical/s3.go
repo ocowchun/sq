@@ -14,10 +14,11 @@ import (
 )
 
 type s3ObjectScan struct {
-	allocator             memory.Allocator
-	BucketName            string
-	KeyPrefix             *string
-	output                catalog.Schema
+	allocator memory.Allocator
+	//BucketName            string
+	//KeyPrefix             *string
+	//output                catalog.Schema
+	node                  *logical.S3ObjectScan
 	s3Client              *s3.Client
 	nextContinuationToken *string
 	hasNext               bool
@@ -34,19 +35,29 @@ func newS3ObjectScan(node *logical.S3ObjectScan, allocator memory.Allocator) *s3
 
 	s3Client := s3.NewFromConfig(awsCfg)
 	return &s3ObjectScan{
-		allocator:  allocator,
-		BucketName: node.BucketName,
-		KeyPrefix:  node.KeyPrefix,
-		output:     node.Schema(),
-		s3Client:   s3Client,
-		hasNext:    true,
+		allocator: allocator,
+		node:      node,
+		//BucketName: node.BucketName,
+		//KeyPrefix:  node.KeyPrefix,
+		//output:     node.Schema(),
+		s3Client: s3Client,
+		hasNext:  true,
 	}
 }
 
+func (s *s3ObjectScan) Open() error {
+	return nil
+}
+
+func (s *s3ObjectScan) Close() error {
+	return nil
+}
+
 func (s *s3ObjectScan) Next(ctx context.Context) NextResponse {
+	bucketName := s.node.BucketName
 	request := &s3.ListObjectsV2Input{
-		Bucket: &s.BucketName,
-		Prefix: s.KeyPrefix,
+		Bucket: &bucketName,
+		Prefix: s.node.KeyPrefix,
 
 		OptionalObjectAttributes: []types.OptionalObjectAttributes{types.OptionalObjectAttributesRestoreStatus},
 	}
@@ -55,10 +66,11 @@ func (s *s3ObjectScan) Next(ctx context.Context) NextResponse {
 		return NextResponse{Err: err}
 	}
 
+	prefix := s.node.RelationID + "."
 	schema := arrow.NewSchema([]arrow.Field{
-		{Name: "key", Type: arrow.BinaryTypes.String},
-		{Name: "bucket_name", Type: arrow.BinaryTypes.String},
-		{Name: "size", Type: arrow.PrimitiveTypes.Int64},
+		{Name: prefix + "key", Type: arrow.BinaryTypes.String},
+		{Name: prefix + "bucket_name", Type: arrow.BinaryTypes.String},
+		{Name: prefix + "size", Type: arrow.PrimitiveTypes.Int64},
 	}, nil)
 
 	keyBuilder := array.NewStringBuilder(s.allocator)
@@ -70,7 +82,7 @@ func (s *s3ObjectScan) Next(ctx context.Context) NextResponse {
 
 	for _, object := range page.Contents {
 		keyBuilder.Append(*object.Key)
-		bucketNameBuilder.Append(s.BucketName)
+		bucketNameBuilder.Append(bucketName)
 		sizeBuilder.Append(*object.Size)
 	}
 	s.nextContinuationToken = page.NextContinuationToken
@@ -93,5 +105,6 @@ func (s *s3ObjectScan) Next(ctx context.Context) NextResponse {
 }
 
 func (s *s3ObjectScan) Schema() *catalog.Schema {
-	return &s.output
+	schema := s.node.Schema()
+	return &schema
 }

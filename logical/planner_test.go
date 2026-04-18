@@ -7,14 +7,29 @@ import (
 	"github.com/ocowchun/sq/catalog"
 )
 
-func TestBuildLogicalPlanForJoinAggregateQuery(t *testing.T) {
-	sql := "SELECT t.name AS team_name, u.name AS user_name FROM users as u LEFT JOIN teams as t ON u.team_id = t.id WHERE t.active = true"
+func TestBuildLogicalPlanForJoinQuery(t *testing.T) {
+	sql := `
+	SELECT t.name AS team_name, u.name AS user_name
+	FROM users as u
+		LEFT JOIN teams as t ON u.team_id = t.id
+	WHERE t.active = true
+	ORDER BY t.name ASC
+	LIMIT 5
+`
 	plan, err := buildLogicalPlan(testCatalog(), sql)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	project, ok := plan.(*Project)
+	limit, ok := plan.(*Limit)
+	if !ok {
+		t.Fatalf("plan = %T, want *Limit", plan)
+	}
+	if limit.Count != 5 {
+		t.Errorf("limit.Count = %d, want = %d", limit.Count, 5)
+	}
+
+	project, ok := limit.Input.(*Project)
 	if !ok {
 		t.Fatalf("plan = %T, want *Project", plan)
 	}
@@ -37,7 +52,15 @@ func TestBuildLogicalPlanForJoinAggregateQuery(t *testing.T) {
 		t.Fatalf("unexpected second select item: %+v", project.SelectExprs[1])
 	}
 
-	where, ok := project.Input.(*Filter)
+	sort, ok := project.Input.(*OrderBy)
+	if !ok {
+		t.Fatalf("limit input = %T, want *Sort", limit.Input)
+	}
+	if len(sort.Orderings) != 1 {
+		t.Errorf("sort.OrderBy = %+v, want = %+v", sort.Orderings[0], sort.Orderings[0])
+	}
+
+	where, ok := sort.Input.(*Filter)
 	if !ok {
 		t.Fatalf("project input = %T, want *Filter", project.Input)
 	}

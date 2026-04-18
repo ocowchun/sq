@@ -81,10 +81,29 @@ func (b *logicalBuilder) buildLogicalQuery(query *binder.Query) (Node, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if len(query.OrderBy) > 0 {
+		orderBy, err := b.buildOrderBy(query.OrderBy, relationIds)
+		if err != nil {
+			return nil, err
+		}
+		plan = &OrderBy{
+			Input:     plan,
+			Orderings: orderBy,
+		}
+	}
+
 	plan = &Project{
 		Input:        plan,
 		SelectExprs:  selectExprs,
 		OutputSchema: query.Schema,
+	}
+
+	if query.Limit != nil {
+		plan = &Limit{
+			Input: plan,
+			Count: *query.Limit,
+		}
 	}
 
 	if len(definitions) == 0 {
@@ -94,6 +113,22 @@ func (b *logicalBuilder) buildLogicalQuery(query *binder.Query) (Node, error) {
 		CTEs: definitions,
 		Root: plan,
 	}, nil
+}
+
+func (b *logicalBuilder) buildOrderBy(orderings []binder.Ordering, relationIDs map[string]string) ([]Ordering, error) {
+	res := make([]Ordering, len(orderings))
+	for i, ordering := range orderings {
+		expr, err := lowerExpr(ordering.Expr, relationIDs)
+		if err != nil {
+			return nil, err
+		}
+		res[i] = Ordering{
+			Expr: expr,
+			Desc: ordering.Desc,
+		}
+	}
+
+	return res, nil
 }
 
 func lowerSelectExprs(exprs []binder.SelectExpr, relationIDs map[string]string) ([]SelectExpr, error) {

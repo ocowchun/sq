@@ -95,7 +95,6 @@ func (p *Parser) parse() (ast.Statement, error) {
 	case token.TokenTypeSelect:
 		return p.parseSelectStatement()
 	case token.TokenTypeWith:
-		// TODO: parse with
 		ctes, err := p.parseCTEs()
 		if err != nil {
 			return nil, err
@@ -180,29 +179,76 @@ func (p *Parser) parseSelectStatement() (*ast.SelectStatement, error) {
 		return nil, newParserError(p.currentToken().Pos, fmt.Sprintf("expected at least one select expression"))
 	}
 
-	// parse from
 	from, err := p.parseFrom()
 	if err != nil {
 		return nil, err
 	}
 
-	// parse where
-	var searchCondition ast.SearchCondition
-	if p.currentTokenIs(token.TokenTypeWhere) {
-		p.advance()
-		searchCondition, err = p.parseSearchCondition()
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	selectStatement := &ast.SelectStatement{
 		SelectExprs: selectExprs,
 		From:        from,
-		Where:       searchCondition,
+	}
+
+	if p.currentTokenIs(token.TokenTypeWhere) {
+		p.advance()
+		searchCondition, err := p.parseSearchCondition()
+		if err != nil {
+			return nil, err
+		}
+		selectStatement.Where = searchCondition
+	}
+
+	if p.currentTokenIs(token.TokenTypeOrder) {
+		orderBy, err := p.parseOrderBy()
+		if err != nil {
+			return nil, err
+		}
+		selectStatement.OrderBy = orderBy
+	}
+	if p.currentTokenIs(token.TokenTypeLimit) {
+		p.advance()
+
+		if p.currentTokenIs(token.TokenTypeInt) {
+			t := p.advance()
+			limit := t.Literal.(int64)
+			selectStatement.Limit = &limit
+		} else {
+			message := fmt.Sprintf("expected integer literal for limit but got token %s", p.currentToken().Lexeme)
+			return nil, newParserError(p.currentToken().Pos, message)
+		}
 	}
 
 	return selectStatement, nil
+}
+
+func (p *Parser) parseOrderBy() ([]ast.Ordering, error) {
+	p.advance()
+	_, err := p.consume(token.TokenTypeBy, "expected by")
+	if err != nil {
+		return nil, err
+	}
+	orderBy := make([]ast.Ordering, 0)
+	for {
+		expr, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		ordering := ast.Ordering{
+			Expr: expr,
+		}
+		if p.currentTokenIs(token.TokenTypeDesc, token.TokenTypeAsc) {
+			ordering.Desc = p.currentTokenIs(token.TokenTypeDesc)
+			p.advance()
+		}
+		orderBy = append(orderBy, ordering)
+
+		if !p.currentTokenIs(token.TokenTypeComma) {
+			break
+		}
+		p.advance()
+	}
+
+	return orderBy, nil
 }
 
 func (p *Parser) parseSelectExpr() (ast.SelectExpr, error) {

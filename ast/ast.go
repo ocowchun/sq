@@ -16,6 +16,13 @@ type SelectStatement struct {
 	SelectExprs []SelectExpr
 	From        From
 	Where       SearchCondition
+	OrderBy     []Ordering
+	Limit       *int64
+}
+
+type Ordering struct {
+	Expr Expr
+	Desc bool
 }
 
 type SelectExpr struct {

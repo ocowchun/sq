@@ -42,6 +42,11 @@ const (
 	TokenTypeFalse
 	TokenTypeNull
 	TokenTypeAs
+	TokenTypeLimit
+	TokenTypeOrder
+	TokenTypeBy
+	TokenTypeAsc
+	TokenTypeDesc
 	TokenTypeEOF
 )
 
@@ -121,6 +126,16 @@ func (t TokenType) String() string {
 		return "False"
 	case TokenTypeAs:
 		return "AS"
+	case TokenTypeLimit:
+		return "LIMIT"
+	case TokenTypeOrder:
+		return "ORDER"
+	case TokenTypeBy:
+		return "BY"
+	case TokenTypeAsc:
+		return "ASC"
+	case TokenTypeDesc:
+		return "Desc"
 	case TokenTypeEOF:
 		return "EOF"
 	default:

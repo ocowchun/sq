@@ -26,6 +26,14 @@ func newFilter(input Iterator, node *logical.Filter, allocator memory.Allocator)
 	}
 }
 
+func (f *filter) Open() error {
+	return f.input.Open()
+}
+
+func (f *filter) Close() error {
+	return f.input.Close()
+}
+
 func (f *filter) Next(ctx context.Context) NextResponse {
 	innerRes := f.input.Next(ctx)
 	if innerRes.Err != nil {

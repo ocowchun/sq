@@ -14,8 +14,8 @@ import (
 func Test_EvalSearchCondition(t *testing.T) {
 	allocator := memory.NewGoAllocator()
 	schema := arrow.NewSchema([]arrow.Field{
-		{Name: "columnA", Type: arrow.PrimitiveTypes.Int64},
-		{Name: "columnB", Type: arrow.BinaryTypes.String},
+		{Name: "rel#1.columnA", Type: arrow.PrimitiveTypes.Int64},
+		{Name: "rel#1.columnB", Type: arrow.BinaryTypes.String},
 	}, nil)
 
 	bA := array.NewInt64Builder(allocator)

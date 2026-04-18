@@ -77,3 +77,21 @@ from object
 		t.Fatal("expected statement")
 	}
 }
+
+func Test_ParserWithOrderLimit(t *testing.T) {
+	input := `
+select *
+from object
+order by key, size desc
+limit 10
+`
+
+	stmt, err := Parse(input)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stmt == nil {
+		t.Fatal("expected statement")
+	}
+}

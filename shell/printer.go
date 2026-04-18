@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -72,7 +73,7 @@ func (p *LinePrinter) SetData(data [][]string) error {
 
 	if len(data[0]) != len(p.header) {
 		message := fmt.Sprintf("header length mismatch: header has %d columns while has %d columns", len(p.header), len(data[0]))
-		return fmt.Errorf(message)
+		return errors.New(message)
 	}
 	p.data = data
 	return nil
@@ -110,7 +111,7 @@ func (p *CsvPrinter) SetData(data [][]string) error {
 
 	if len(data[0]) != len(p.header) {
 		message := fmt.Sprintf("header length mismatch: header has %d columns while has %d columns", len(p.header), len(data[0]))
-		return fmt.Errorf(message)
+		return errors.New(message)
 	}
 	p.data = data
 	return nil
@@ -119,18 +120,18 @@ func (p *CsvPrinter) SetData(data [][]string) error {
 func (p *CsvPrinter) Print() error {
 	for i, field := range p.header {
 		if i > 0 {
-			fmt.Printf(",")
+			fmt.Print(",")
 		}
-		fmt.Printf(field)
+		fmt.Print(field)
 	}
 	fmt.Println()
 
 	for _, row := range p.data {
 		for i, cell := range row {
 			if i > 0 {
-				fmt.Printf(",")
+				fmt.Print(",")
 			}
-			fmt.Printf(cell)
+			fmt.Print(cell)
 		}
 		fmt.Println()
 	}

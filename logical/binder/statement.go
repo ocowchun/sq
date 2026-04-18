@@ -21,6 +21,13 @@ type Query struct {
 	From        From
 	Where       SearchCondition
 	Schema      catalog.Schema
+	OrderBy     []Ordering
+	Limit       *uint32
+}
+
+type Ordering struct {
+	Expr Expr
+	Desc bool
 }
 
 func (q Query) statement() {}

@@ -231,6 +231,16 @@ func (l *lexer) nextKeywordOrIdentifier(pos token.Position) (token.Token, error)
 		return token.Token{Type: token.TokenTypeJoin, Lexeme: str, Literal: nil, Pos: pos}, nil
 	case "with":
 		return token.Token{Type: token.TokenTypeWith, Lexeme: str, Literal: nil, Pos: pos}, nil
+	case "limit":
+		return token.Token{Type: token.TokenTypeLimit, Lexeme: str, Literal: nil, Pos: pos}, nil
+	case "order":
+		return token.Token{Type: token.TokenTypeOrder, Lexeme: str, Literal: nil, Pos: pos}, nil
+	case "by":
+		return token.Token{Type: token.TokenTypeBy, Lexeme: str, Literal: nil, Pos: pos}, nil
+	case "asc":
+		return token.Token{Type: token.TokenTypeAsc, Lexeme: str, Literal: nil, Pos: pos}, nil
+	case "desc":
+		return token.Token{Type: token.TokenTypeDesc, Lexeme: str, Literal: nil, Pos: pos}, nil
 
 	default:
 		return token.Token{Type: token.TokenTypeIdentifier, Lexeme: str, Literal: nil, Pos: pos}, nil

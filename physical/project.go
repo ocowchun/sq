@@ -26,19 +26,12 @@ func newProject(input Iterator, node *logical.Project, allocator memory.Allocato
 	}
 }
 
-func toDataType(columnType catalog.ColumnType) arrow.DataType {
-	switch columnType {
-	case catalog.ColumnTypeInt:
-		return arrow.PrimitiveTypes.Int64
-	case catalog.ColumnTypeDouble:
-		return arrow.PrimitiveTypes.Float64
-	case catalog.ColumnTypeString:
-		return arrow.BinaryTypes.String
-	case catalog.ColumnTypeBool:
-		return arrow.FixedWidthTypes.Boolean
-	default:
-		panic("unhandled column type")
-	}
+func (p *project) Open() error {
+	return p.input.Open()
+}
+
+func (p *project) Close() error {
+	return p.input.Close()
 }
 
 func (p *project) Next(ctx context.Context) NextResponse {
