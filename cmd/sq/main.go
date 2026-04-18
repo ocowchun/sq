@@ -13,7 +13,7 @@ import (
 	"github.com/ocowchun/sq/shell"
 )
 
-const VERSION = "v0.0.1"
+const VERSION = "v0.0.2"
 
 func main() {
 	versionFlag := flag.Bool("version", false, "print version and exit")
