@@ -43,6 +43,14 @@ func newS3ObjectScan(node *logical.S3ObjectScan, allocator memory.Allocator) *s3
 	}
 }
 
+func (s *s3ObjectScan) Open() error {
+	return nil
+}
+
+func (s *s3ObjectScan) Close() error {
+	return nil
+}
+
 func (s *s3ObjectScan) Next(ctx context.Context) NextResponse {
 	request := &s3.ListObjectsV2Input{
 		Bucket: &s.BucketName,

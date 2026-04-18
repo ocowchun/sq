@@ -208,6 +208,29 @@ func (p *Project) Schema() catalog.Schema {
 	return p.OutputSchema
 }
 
+type Order struct {
+	Expr Expr
+	Desc bool
+}
+
+type Sort struct {
+	Input   Node
+	OrderBy []Order
+}
+
+func (s *Sort) Schema() catalog.Schema {
+	return s.Input.Schema()
+}
+
+type Limit struct {
+	Input Node
+	Count uint32
+}
+
+func (l *Limit) Schema() catalog.Schema {
+	return l.Input.Schema()
+}
+
 type Join struct {
 	Left         Node
 	Right        Node

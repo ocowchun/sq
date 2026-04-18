@@ -42,6 +42,9 @@ func Test_BindResolvesQualifiedAndUnqualifiedColumns(t *testing.T) {
 	if second.TableName != "users" || second.ColumnName != "id" || second.ColumnIndex != 0 {
 		t.Fatalf("unexpected second select binding: %+v", second)
 	}
+	if len(query.OrderBy) != 1 {
+		t.Fatalf("order by count = %d, want 1", len(query.OrderBy))
+	}
 }
 
 func Test_BindRejectInvalidCases(t *testing.T) {

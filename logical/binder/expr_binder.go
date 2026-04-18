@@ -220,7 +220,7 @@ func (b *exprBinder) bindIdentifier(expr *ast.IdentifierExpr) (Expr, error) {
 	return b.columnRef(column), nil
 }
 
-func (b *exprBinder) columnRef(column *scopeColumn) Expr {
+func (b *exprBinder) columnRef(column *scopeColumn) *ColumnRef {
 	return &ColumnRef{
 		TableName:   column.table.name,
 		TableAlias:  column.table.alias,

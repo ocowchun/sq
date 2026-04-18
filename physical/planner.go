@@ -94,6 +94,26 @@ func buildIterator(logicalPlan logical.Node, state *ExecutionState, allocator me
 		}, nil
 	case *logical.Join:
 		panic("implement me")
+	case *logical.Limit:
+		subPlan, err := buildIterator(node.Input, state, allocator)
+		if err != nil {
+			return nil, err
+		}
+		return &Plan{
+			CTESetupTasks:  subPlan.CTESetupTasks,
+			Iterator:       newLimit(subPlan.Iterator, node.Count, allocator),
+			ExecutionState: state,
+		}, nil
+	case *logical.Sort:
+		subPlan, err := buildIterator(node.Input, state, allocator)
+		if err != nil {
+			return nil, err
+		}
+		return &Plan{
+			CTESetupTasks:  subPlan.CTESetupTasks,
+			Iterator:       newOrderBy(subPlan.Iterator, node.OrderBy, allocator),
+			ExecutionState: state,
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported plan type: %T", node)
 	}

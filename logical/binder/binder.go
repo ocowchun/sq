@@ -88,13 +88,95 @@ func (b *Binder) bindSelect(statement *ast.SelectStatement, visibleCTEs map[stri
 		return nil, err
 	}
 
+	orderBy, err := b.bindOrderBy(scope, statement.OrderBy, selectExprs)
+	if err != nil {
+		return nil, err
+	}
+
+	var limit *uint32
+	if statement.Limit != nil {
+		if *statement.Limit < 0 {
+			return nil, fmt.Errorf("limit must be non-negative")
+		}
+		l := uint32(*statement.Limit)
+		limit = &l
+	}
+
 	return &Query{
 		CTEs:        boundCTEs,
 		SelectExprs: selectExprs,
 		From:        from,
 		Where:       where,
 		Schema:      buildSchema(selectExprs),
+		OrderBy:     orderBy,
+		Limit:       limit,
 	}, nil
+}
+
+func (b *Binder) bindOrderBy(scope *scope, orders []ast.Order, selectExprs []SelectExpr) ([]Order, error) {
+	orderBy := make([]Order, len(orders))
+	if orders == nil || len(orders) == 0 {
+		return orderBy, nil
+	}
+
+	aliasIndexes := make(map[string]int)
+	for i, selectExpr := range selectExprs {
+		if selectExpr.Alias != "" {
+			aliasIndexes[selectExpr.Alias] = i
+		}
+	}
+
+	selectBinder := newExprBinder(scope, b.catalog)
+	for i, order := range orders {
+		switch expr := order.Expr.(type) {
+		case *ast.LiteralExpr:
+			if expr.LiteralType == ast.LiteralTypeInt {
+				index := int(expr.Value.(int64))
+				if index < 0 || index >= len(scope.tables) {
+					return nil, newBindError(expr.Pos, "index out of range")
+				}
+
+				o := Order{
+					Expr: selectExprs[index].Expr,
+					Desc: order.Desc,
+				}
+				orderBy[i] = o
+			} else {
+				return orderBy, newBindError(expr.Pos, fmt.Sprintf("unsupported order expression"))
+			}
+		case *ast.IdentifierExpr:
+			if index, ok := aliasIndexes[expr.Name]; ok {
+				o := Order{
+					Expr: selectExprs[index].Expr,
+					Desc: order.Desc,
+				}
+				orderBy[i] = o
+				continue
+			}
+
+			columnRef, err := selectBinder.bindIdentifier(expr)
+			if err != nil {
+				return nil, err
+			}
+			o := Order{
+				Expr: columnRef,
+				Desc: order.Desc,
+			}
+			orderBy[i] = o
+		default:
+			exp, err := selectBinder.bind(order.Expr)
+			if err != nil {
+				return nil, err
+			}
+			o := Order{
+				Expr: exp,
+				Desc: order.Desc,
+			}
+			orderBy[i] = o
+		}
+	}
+
+	return orderBy, nil
 }
 
 func buildSchema(items []SelectExpr) catalog.Schema {
@@ -189,7 +271,6 @@ func cloneCTEs(ctes map[string]CTE) map[string]CTE {
 }
 
 func (b *Binder) bindFrom(scope *scope, from ast.From, visibleCTEs map[string]CTE, currentCTE string) (From, error) {
-
 	rel, err := b.lookupRelation(from.Relation.Name, visibleCTEs, currentCTE)
 	if err != nil {
 		return From{}, err

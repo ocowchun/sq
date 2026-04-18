@@ -26,6 +26,14 @@ func newProject(input Iterator, node *logical.Project, allocator memory.Allocato
 	}
 }
 
+func (p *project) Open() error {
+	return p.input.Open()
+}
+
+func (p *project) Close() error {
+	return p.input.Close()
+}
+
 func toDataType(columnType catalog.ColumnType) arrow.DataType {
 	switch columnType {
 	case catalog.ColumnTypeInt:

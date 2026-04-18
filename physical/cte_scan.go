@@ -29,6 +29,14 @@ func newScan(node *logical.Scan, executionState *ExecutionState, allocator memor
 	}
 }
 
+func (s *cteScan) Open() error {
+	return nil
+}
+
+func (s *cteScan) Close() error {
+	return nil
+}
+
 func (s *cteScan) Next(ctx context.Context) NextResponse {
 	cte, ok := s.executionState.GetCTE(s.cteName)
 	if !ok {

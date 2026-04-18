@@ -10,7 +10,7 @@ import (
 func TestLexer(t *testing.T) {
 	input := `
 ( ) , . - + * ; != =  < <= > >= 1.2 1234 "hola a" foo and false null or true
-inner left join select where 'ramen'
+inner left join select where 'ramen' limit order by asc desc
 `
 	l := newLexer(input)
 
@@ -44,7 +44,12 @@ inner left join select where 'ramen'
 		{Type: token.TokenTypeSelect, Pos: token.Position{Offset: 94, Line: 3, Column: 17}},
 		{Type: token.TokenTypeWhere, Pos: token.Position{Offset: 101, Line: 3, Column: 24}},
 		{Type: token.TokenTypeString, Pos: token.Position{Offset: 107, Line: 3, Column: 30}, Literal: "ramen"},
-		{Type: token.TokenTypeEOF, Pos: token.Position{Offset: 114, Line: 4, Column: 1}},
+		{Type: token.TokenTypeLimit, Pos: token.Position{Offset: 115, Line: 3, Column: 38}},
+		{Type: token.TokenTypeOrder, Pos: token.Position{Offset: 121, Line: 3, Column: 44}},
+		{Type: token.TokenTypeBy, Pos: token.Position{Offset: 127, Line: 3, Column: 50}},
+		{Type: token.TokenTypeAsc, Pos: token.Position{Offset: 130, Line: 3, Column: 53}},
+		{Type: token.TokenTypeDesc, Pos: token.Position{Offset: 134, Line: 3, Column: 57}},
+		{Type: token.TokenTypeEOF, Pos: token.Position{Offset: 138, Line: 4, Column: 1}},
 	}
 
 	i := 0
