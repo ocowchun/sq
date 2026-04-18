@@ -52,12 +52,12 @@ func TestBuildLogicalPlanForJoinQuery(t *testing.T) {
 		t.Fatalf("unexpected second select item: %+v", project.SelectExprs[1])
 	}
 
-	sort, ok := project.Input.(*Sort)
+	sort, ok := project.Input.(*OrderBy)
 	if !ok {
 		t.Fatalf("limit input = %T, want *Sort", limit.Input)
 	}
-	if len(sort.OrderBy) != 1 {
-		t.Errorf("sort.OrderBy = %+v, want = %+v", sort.OrderBy[0], sort.OrderBy[0])
+	if len(sort.Orderings) != 1 {
+		t.Errorf("sort.OrderBy = %+v, want = %+v", sort.Orderings[0], sort.Orderings[0])
 	}
 
 	where, ok := sort.Input.(*Filter)

@@ -113,9 +113,9 @@ func (b *Binder) bindSelect(statement *ast.SelectStatement, visibleCTEs map[stri
 	}, nil
 }
 
-func (b *Binder) bindOrderBy(scope *scope, orders []ast.Order, selectExprs []SelectExpr) ([]Order, error) {
-	orderBy := make([]Order, len(orders))
-	if orders == nil || len(orders) == 0 {
+func (b *Binder) bindOrderBy(scope *scope, orderings []ast.Ordering, selectExprs []SelectExpr) ([]Ordering, error) {
+	orderBy := make([]Ordering, len(orderings))
+	if orderings == nil || len(orderings) == 0 {
 		return orderBy, nil
 	}
 
@@ -127,8 +127,8 @@ func (b *Binder) bindOrderBy(scope *scope, orders []ast.Order, selectExprs []Sel
 	}
 
 	selectBinder := newExprBinder(scope, b.catalog)
-	for i, order := range orders {
-		switch expr := order.Expr.(type) {
+	for i, ordering := range orderings {
+		switch expr := ordering.Expr.(type) {
 		case *ast.LiteralExpr:
 			if expr.LiteralType == ast.LiteralTypeInt {
 				index := int(expr.Value.(int64))
@@ -136,9 +136,9 @@ func (b *Binder) bindOrderBy(scope *scope, orders []ast.Order, selectExprs []Sel
 					return nil, newBindError(expr.Pos, "index out of range")
 				}
 
-				o := Order{
+				o := Ordering{
 					Expr: selectExprs[index].Expr,
-					Desc: order.Desc,
+					Desc: ordering.Desc,
 				}
 				orderBy[i] = o
 			} else {
@@ -146,9 +146,9 @@ func (b *Binder) bindOrderBy(scope *scope, orders []ast.Order, selectExprs []Sel
 			}
 		case *ast.IdentifierExpr:
 			if index, ok := aliasIndexes[expr.Name]; ok {
-				o := Order{
+				o := Ordering{
 					Expr: selectExprs[index].Expr,
-					Desc: order.Desc,
+					Desc: ordering.Desc,
 				}
 				orderBy[i] = o
 				continue
@@ -158,19 +158,19 @@ func (b *Binder) bindOrderBy(scope *scope, orders []ast.Order, selectExprs []Sel
 			if err != nil {
 				return nil, err
 			}
-			o := Order{
+			o := Ordering{
 				Expr: columnRef,
-				Desc: order.Desc,
+				Desc: ordering.Desc,
 			}
 			orderBy[i] = o
 		default:
-			exp, err := selectBinder.bind(order.Expr)
+			exp, err := selectBinder.bind(ordering.Expr)
 			if err != nil {
 				return nil, err
 			}
-			o := Order{
+			o := Ordering{
 				Expr: exp,
-				Desc: order.Desc,
+				Desc: ordering.Desc,
 			}
 			orderBy[i] = o
 		}

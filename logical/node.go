@@ -68,6 +68,10 @@ func (c *ColumnRef) Type() catalog.ColumnType {
 	return c.ColumnType
 }
 
+func (c *ColumnRef) CanonicalColumnName() string {
+	return c.RelationID + "." + c.ColumnName
+}
+
 type UnaryExpr struct {
 	Op         ast.UnaryOp
 	Expr       Expr
@@ -208,18 +212,18 @@ func (p *Project) Schema() catalog.Schema {
 	return p.OutputSchema
 }
 
-type Order struct {
+type Ordering struct {
 	Expr Expr
 	Desc bool
 }
 
-type Sort struct {
-	Input   Node
-	OrderBy []Order
+type OrderBy struct {
+	Input     Node
+	Orderings []Ordering
 }
 
-func (s *Sort) Schema() catalog.Schema {
-	return s.Input.Schema()
+func (o *OrderBy) Schema() catalog.Schema {
+	return o.Input.Schema()
 }
 
 type Limit struct {

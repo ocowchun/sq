@@ -21,11 +21,11 @@ type Query struct {
 	From        From
 	Where       SearchCondition
 	Schema      catalog.Schema
-	OrderBy     []Order
+	OrderBy     []Ordering
 	Limit       *uint32
 }
 
-type Order struct {
+type Ordering struct {
 	Expr Expr
 	Desc bool
 }

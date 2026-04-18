@@ -2,7 +2,6 @@ package physical
 
 import (
 	"context"
-	"fmt"
 	"slices"
 	"strings"
 
@@ -17,17 +16,17 @@ import (
 type orderBy struct {
 	allocator memory.Allocator
 	input     Iterator
-	order     []logical.Order
+	orderings []logical.Ordering
 	start     bool
 	sorted    arrow.RecordBatch
 	current   int64
 }
 
-func newOrderBy(input Iterator, orders []logical.Order, allocator memory.Allocator) *orderBy {
+func newOrderBy(input Iterator, orderings []logical.Ordering, allocator memory.Allocator) *orderBy {
 	return &orderBy{
 		allocator: allocator,
 		input:     input,
-		order:     orders,
+		orderings: orderings,
 		start:     false,
 		current:   0,
 	}
@@ -45,9 +44,9 @@ func (o *orderBy) Open() error {
 		return err
 	}
 
-	sortCols := make([]arrow.Array, len(o.order))
+	sortCols := make([]arrow.Array, len(o.orderings))
 	eval := newEvaluator(o.allocator)
-	for i, expr := range o.order {
+	for i, expr := range o.orderings {
 		exprRes := eval.evaluateExpr(expr.Expr, totalBatch)
 		if exprRes.err != nil {
 			return exprRes.err
@@ -62,7 +61,7 @@ func (o *orderBy) Open() error {
 
 	slices.SortStableFunc(rows, func(left int, right int) int {
 		for idx, col := range sortCols {
-			res := compare(col, o.order[idx], left, right)
+			res := compare(col, o.orderings[idx], left, right)
 			if res != 0 {
 				return res
 			}
@@ -121,7 +120,7 @@ func (o *orderBy) Schema() *catalog.Schema {
 	return o.input.Schema()
 }
 
-func compare(ary arrow.Array, order logical.Order, left int, right int) int {
+func compare(ary arrow.Array, ordering logical.Ordering, left int, right int) int {
 	res := 0
 	if ary.IsNull(left) && ary.IsNull(right) {
 		res = 0
@@ -131,7 +130,7 @@ func compare(ary arrow.Array, order logical.Order, left int, right int) int {
 		res = 1
 	}
 
-	switch order.Expr.Type() {
+	switch ordering.Expr.Type() {
 	case catalog.ColumnTypeInt:
 		a := ary.(*array.Int64)
 		leftVal := a.Value(left)
@@ -168,7 +167,7 @@ func compare(ary arrow.Array, order logical.Order, left int, right int) int {
 		return 0
 	}
 
-	if order.Desc {
+	if ordering.Desc {
 		res = -res
 	}
 	return res
@@ -198,40 +197,4 @@ func (o *orderBy) drain() (arrow.RecordBatch, error) {
 		return nil, err
 	}
 	return merged, nil
-}
-
-func mergeBatches(batches []arrow.RecordBatch, allocator memory.Allocator) (arrow.RecordBatch, error) {
-	if len(batches) == 0 {
-		return nil, fmt.Errorf("no batches")
-	}
-
-	schema := batches[0].Schema()
-	numCols := int(batches[0].NumCols())
-	cols := make([]arrow.Array, numCols)
-	totalRows := int64(0)
-	defer func() {
-		for _, col := range cols {
-			if col != nil {
-				col.Release()
-			}
-		}
-	}()
-
-	for _, batch := range batches {
-		totalRows += batch.NumRows()
-	}
-	for i := 0; i < numCols; i++ {
-		pieces := make([]arrow.Array, len(batches))
-		for j, batch := range batches {
-			pieces[j] = batch.Column(i)
-		}
-		merged, err := array.Concatenate(pieces, allocator)
-		if err != nil {
-			return nil, err
-		}
-		cols[i] = merged
-	}
-
-	out := array.NewRecordBatch(schema, cols, totalRows)
-	return out, nil
 }

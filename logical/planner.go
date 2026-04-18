@@ -87,9 +87,9 @@ func (b *logicalBuilder) buildLogicalQuery(query *binder.Query) (Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		plan = &Sort{
-			Input:   plan,
-			OrderBy: orderBy,
+		plan = &OrderBy{
+			Input:     plan,
+			Orderings: orderBy,
 		}
 	}
 
@@ -115,16 +115,16 @@ func (b *logicalBuilder) buildLogicalQuery(query *binder.Query) (Node, error) {
 	}, nil
 }
 
-func (b *logicalBuilder) buildOrderBy(orders []binder.Order, relationIDs map[string]string) ([]Order, error) {
-	res := make([]Order, len(orders))
-	for i, order := range orders {
-		expr, err := lowerExpr(order.Expr, relationIDs)
+func (b *logicalBuilder) buildOrderBy(orderings []binder.Ordering, relationIDs map[string]string) ([]Ordering, error) {
+	res := make([]Ordering, len(orderings))
+	for i, ordering := range orderings {
+		expr, err := lowerExpr(ordering.Expr, relationIDs)
 		if err != nil {
 			return nil, err
 		}
-		res[i] = Order{
+		res[i] = Ordering{
 			Expr: expr,
-			Desc: order.Desc,
+			Desc: ordering.Desc,
 		}
 	}
 

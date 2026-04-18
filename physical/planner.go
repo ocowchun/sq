@@ -104,14 +104,14 @@ func buildIterator(logicalPlan logical.Node, state *ExecutionState, allocator me
 			Iterator:       newLimit(subPlan.Iterator, node.Count, allocator),
 			ExecutionState: state,
 		}, nil
-	case *logical.Sort:
+	case *logical.OrderBy:
 		subPlan, err := buildIterator(node.Input, state, allocator)
 		if err != nil {
 			return nil, err
 		}
 		return &Plan{
 			CTESetupTasks:  subPlan.CTESetupTasks,
-			Iterator:       newOrderBy(subPlan.Iterator, node.OrderBy, allocator),
+			Iterator:       newOrderBy(subPlan.Iterator, node.Orderings, allocator),
 			ExecutionState: state,
 		}, nil
 	default:

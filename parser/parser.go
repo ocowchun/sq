@@ -221,26 +221,26 @@ func (p *Parser) parseSelectStatement() (*ast.SelectStatement, error) {
 	return selectStatement, nil
 }
 
-func (p *Parser) parseOrderBy() ([]ast.Order, error) {
+func (p *Parser) parseOrderBy() ([]ast.Ordering, error) {
 	p.advance()
 	_, err := p.consume(token.TokenTypeBy, "expected by")
 	if err != nil {
 		return nil, err
 	}
-	orderBy := make([]ast.Order, 0)
+	orderBy := make([]ast.Ordering, 0)
 	for {
 		expr, err := p.parseExpr()
 		if err != nil {
 			return nil, err
 		}
-		order := ast.Order{
+		ordering := ast.Ordering{
 			Expr: expr,
 		}
 		if p.currentTokenIs(token.TokenTypeDesc, token.TokenTypeAsc) {
-			order.Desc = p.currentTokenIs(token.TokenTypeDesc)
+			ordering.Desc = p.currentTokenIs(token.TokenTypeDesc)
 			p.advance()
 		}
-		orderBy = append(orderBy, order)
+		orderBy = append(orderBy, ordering)
 
 		if !p.currentTokenIs(token.TokenTypeComma) {
 			break

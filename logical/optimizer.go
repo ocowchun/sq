@@ -97,7 +97,7 @@ func rewriteObjectAccess(plan Node) (Node, error) {
 		node.Left = left
 		node.Right = right
 		return node, nil
-	case *Sort:
+	case *OrderBy:
 		input, err := rewriteObjectAccess(node.Input)
 		if err != nil {
 			return nil, err
@@ -319,7 +319,7 @@ func pushDownFilters(plan Node) (Node, error) {
 		}
 		node.Right = right
 		return node, nil
-	case *Sort:
+	case *OrderBy:
 		input, err := pushDownFilters(node.Input)
 		if err != nil {
 			return nil, err

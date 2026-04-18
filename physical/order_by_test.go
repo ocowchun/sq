@@ -66,8 +66,8 @@ func Test_OrderBy(t *testing.T) {
 	allocator := memory.NewGoAllocator()
 
 	arrowSchema := arrow.NewSchema([]arrow.Field{
-		{Name: "columnA", Type: arrow.PrimitiveTypes.Int64},
-		{Name: "columnB", Type: arrow.BinaryTypes.String},
+		{Name: "rel#1.columnA", Type: arrow.PrimitiveTypes.Int64},
+		{Name: "rel#1.columnB", Type: arrow.BinaryTypes.String},
 	}, nil)
 
 	bA := array.NewInt64Builder(allocator)
@@ -76,14 +76,12 @@ func Test_OrderBy(t *testing.T) {
 	colA := bA.NewArray()
 	defer colA.Release()
 
-	// Build columnB
 	bB := array.NewStringBuilder(allocator)
 	defer bB.Release()
 	bB.AppendValues([]string{"a", "b", "c", "d", "e", "a"}, nil)
 	colB := bB.NewArray()
 	defer colB.Release()
 
-	// New API
 	batch := array.NewRecordBatch(arrowSchema, []arrow.Array{colA, colB}, int64(colA.Len()))
 
 	input := newTestIterator(allocator, batch, catalog.Schema{
@@ -93,11 +91,25 @@ func Test_OrderBy(t *testing.T) {
 		},
 	})
 
-	order := []logical.Order{
-		{Expr: &logical.ColumnRef{ColumnName: "columnA", ColumnIndex: 0, ColumnType: catalog.ColumnTypeInt}},
-		{Expr: &logical.ColumnRef{ColumnName: "columnB", ColumnIndex: 1, ColumnType: catalog.ColumnTypeString}},
+	orderings := []logical.Ordering{
+		{
+			Expr: &logical.ColumnRef{
+				RelationID:  "rel#1",
+				ColumnName:  "columnA",
+				ColumnIndex: 0,
+				ColumnType:  catalog.ColumnTypeInt,
+			},
+		},
+		{
+			Expr: &logical.ColumnRef{
+				RelationID:  "rel#1",
+				ColumnName:  "columnB",
+				ColumnIndex: 0,
+				ColumnType:  catalog.ColumnTypeString,
+			},
+		},
 	}
-	o := newOrderBy(input, order, allocator)
+	o := newOrderBy(input, orderings, allocator)
 
 	err := o.Open()
 	if err != nil {
