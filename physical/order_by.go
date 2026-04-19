@@ -17,9 +17,9 @@ type orderBy struct {
 	allocator memory.Allocator
 	input     Iterator
 	orderings []logical.Ordering
-	start     bool
 	sorted    arrow.RecordBatch
 	current   int64
+	opened    bool
 }
 
 func newOrderBy(input Iterator, orderings []logical.Ordering, allocator memory.Allocator) *orderBy {
@@ -27,19 +27,18 @@ func newOrderBy(input Iterator, orderings []logical.Ordering, allocator memory.A
 		allocator: allocator,
 		input:     input,
 		orderings: orderings,
-		start:     false,
 		current:   0,
+		opened:    false,
 	}
 }
 
 func (o *orderBy) Open() error {
-	o.start = true
-	err := o.input.Open()
-	if err != nil {
-		return err
+	if o.opened {
+		panic("orderBy already open")
 	}
+	o.opened = true
 
-	totalBatch, err := o.drain()
+	totalBatch, err := drain(o.input, o.allocator)
 	if err != nil {
 		return err
 	}
@@ -171,30 +170,4 @@ func compare(ary arrow.Array, ordering logical.Ordering, left int, right int) in
 		res = -res
 	}
 	return res
-}
-
-func (o *orderBy) drain() (arrow.RecordBatch, error) {
-	batches := make([]arrow.RecordBatch, 0)
-	defer func() {
-		for _, b := range batches {
-			b.Release()
-		}
-	}()
-	ctx := context.Background()
-	for {
-		innerRes := o.input.Next(ctx)
-		if innerRes.Err != nil {
-			return nil, innerRes.Err
-		}
-		batches = append(batches, innerRes.Batch)
-		if !innerRes.HasNext {
-			break
-		}
-	}
-
-	merged, err := mergeBatches(batches, o.allocator)
-	if err != nil {
-		return nil, err
-	}
-	return merged, nil
 }

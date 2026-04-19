@@ -93,7 +93,26 @@ func buildIterator(logicalPlan logical.Node, state *ExecutionState, allocator me
 			ExecutionState: state,
 		}, nil
 	case *logical.Join:
-		panic("implement me")
+		left, err := buildIterator(node.Left, state, allocator)
+		if err != nil {
+			return nil, err
+		}
+		right, err := buildIterator(node.Right, state, allocator)
+		if err != nil {
+			return nil, err
+		}
+		cteSetupTasks := left.CTESetupTasks
+		cteSetupTasks = append(cteSetupTasks, right.CTESetupTasks...)
+		return &Plan{
+			CTESetupTasks: cteSetupTasks,
+			Iterator: newLoopJoin(
+				left.Iterator,
+				right.Iterator,
+				node,
+				allocator,
+			),
+			ExecutionState: state,
+		}, nil
 	case *logical.Limit:
 		subPlan, err := buildIterator(node.Input, state, allocator)
 		if err != nil {
