@@ -76,3 +76,15 @@ func emptyBatch(schema *arrow.Schema, allocator memory.Allocator) arrow.RecordBa
 	res := array.NewRecordBatch(schema, cols, 0)
 	return res
 }
+
+func toArrowSchema(schema *catalog.Schema) *arrow.Schema {
+	fields := make([]arrow.Field, len(schema.Columns))
+	for i, col := range schema.Columns {
+		fields[i] = arrow.Field{
+			Name:     col.Name,
+			Type:     toDataType(col.Type),
+			Nullable: true,
+		}
+	}
+	return arrow.NewSchema(fields, nil)
+}

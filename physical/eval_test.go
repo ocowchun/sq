@@ -373,6 +373,8 @@ func Test_EvalSearchCondition(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer ary.Release()
+
 			assertBooleanArray(t, ary, tt.expected)
 		})
 	}

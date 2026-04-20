@@ -32,6 +32,14 @@ func (l *limit) Close() error {
 }
 
 func (l *limit) Next(ctx context.Context) NextResponse {
+	if l.current >= l.count {
+		return NextResponse{
+			Batch:   emptyBatch(toArrowSchema(l.Schema()), l.allocator),
+			Err:     nil,
+			HasNext: false,
+		}
+	}
+
 	innerRes := l.input.Next(ctx)
 	if innerRes.Err != nil {
 		return NextResponse{Err: innerRes.Err}
@@ -42,12 +50,12 @@ func (l *limit) Next(ctx context.Context) NextResponse {
 	n := min(innerRes.Batch.NumRows(), int64(l.count-l.current))
 	slice := innerRes.Batch.NewSlice(0, n)
 
-	l.count += uint32(n)
+	l.current += uint32(n)
 
 	return NextResponse{
 		Batch:   slice,
 		Err:     nil,
-		HasNext: innerRes.HasNext && l.count > l.current,
+		HasNext: innerRes.HasNext && l.current < l.count,
 	}
 }
 

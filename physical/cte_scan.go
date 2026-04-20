@@ -44,9 +44,10 @@ func (s *cteScan) Next(ctx context.Context) NextResponse {
 		}
 	}
 	arrowSchema := s.arrowSchema()
+
 	if s.index >= len(cte.records) {
 		return NextResponse{
-			Batch:   array.NewRecordBatch(arrowSchema, nil, 0),
+			Batch:   emptyBatch(arrowSchema, s.allocator),
 			Err:     nil,
 			HasNext: false,
 		}

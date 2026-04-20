@@ -47,6 +47,7 @@ func (f *filter) Next(ctx context.Context) NextResponse {
 	if err != nil {
 		return NextResponse{Err: err}
 	}
+	defer mask.Release()
 
 	filtered, err := compute.FilterRecordBatch(
 		ctx,

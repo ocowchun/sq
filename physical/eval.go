@@ -40,10 +40,14 @@ func (e *evaluator) evaluateSearchCondition(condition logical.SearchCondition, b
 		if err != nil {
 			return nil, err
 		}
+		defer left.Release()
+
 		right, err := e.evaluateSearchCondition(cond.Right, batch)
 		if err != nil {
 			return nil, err
 		}
+		defer right.Release()
+
 		leftDatum := compute.NewDatum(left)
 		defer leftDatum.Release()
 
@@ -69,10 +73,14 @@ func (e *evaluator) evaluateSearchCondition(condition logical.SearchCondition, b
 		if err != nil {
 			return nil, err
 		}
+		defer left.Release()
+
 		right, err := e.evaluateSearchCondition(cond.Right, batch)
 		if err != nil {
 			return nil, err
 		}
+		defer right.Release()
+
 		leftDatum := compute.NewDatum(left)
 		defer leftDatum.Release()
 
@@ -101,6 +109,7 @@ func (e *evaluator) evaluateSearchCondition(condition logical.SearchCondition, b
 		if innerRes.err != nil {
 			return nil, innerRes.err
 		}
+		defer innerRes.array.Release()
 
 		datum := compute.NewDatum(innerRes.array)
 		defer datum.Release()
@@ -142,8 +151,7 @@ func (e *evaluator) evalInPredicate(predicate *logical.InPredicate, batch arrow.
 	if innerRes.err != nil {
 		return nil, innerRes.err
 	}
-
-	//slices.Contains()
+	defer innerRes.array.Release()
 
 	switch predicate.Left.Type() {
 	case catalog.ColumnTypeInt:
@@ -220,13 +228,13 @@ func (e *evaluator) evalLikePredicate(predicate *logical.LikePredicate, batch ar
 	if innerRes.err != nil {
 		return nil, innerRes.err
 	}
+	defer innerRes.array.Release()
 
 	strs := innerRes.array.(*array.String)
 	b1 := array.NewBooleanBuilder(e.allocator)
 	defer b1.Release()
 	isNotLike := predicate.Not
 	for i := 0; i < strs.Len(); i++ {
-		// TODO: how to handle not like + null case
 		if strs.IsNull(i) {
 			b1.AppendNull()
 			continue
@@ -276,16 +284,21 @@ func (e *evaluator) evaluateCallExpr(expr *logical.CallExpr, batch arrow.RecordB
 		return EvaluatedResponse{err: fmt.Errorf("function %s not found", expr.Callee)}
 	}
 
-	argArray := make([]arrow.Array, len(expr.Args))
+	argArray := make([]arrow.Array, 0, len(expr.Args))
+	defer func() {
+		for _, arg := range argArray {
+			arg.Release()
+		}
+	}()
 
-	for i, arg := range expr.Args {
+	for _, arg := range expr.Args {
 		res := e.evaluateExpr(arg, batch)
 		if res.err != nil {
 			return EvaluatedResponse{
 				err: res.err,
 			}
 		}
-		argArray[i] = res.array
+		argArray = append(argArray, res.array)
 	}
 
 	values := make([]*function.Value, int(batch.NumRows()))
@@ -418,12 +431,15 @@ func (e *evaluator) evaluateBinaryExpr(expr *logical.BinaryExpr, batch arrow.Rec
 			err: leftRes.err,
 		}
 	}
+	defer leftRes.array.Release()
+
 	rightRes := e.evaluateExpr(expr.Right, batch)
 	if rightRes.err != nil {
 		return EvaluatedResponse{
 			err: rightRes.err,
 		}
 	}
+	defer rightRes.array.Release()
 
 	if expr.Left.Type().IsIn(catalog.ColumnTypeString) && expr.Right.Type().IsIn(catalog.ColumnTypeString) && expr.Op.IsIn(ast.BinaryOpAdd) {
 		return e.evaluateAddString(leftRes.array.(*array.String), rightRes.array.(*array.String))
@@ -801,6 +817,7 @@ func (e *evaluator) evaluateUnaryExpr(expr *logical.UnaryExpr, batch arrow.Recor
 		}
 	}
 	innerArray := res.array
+	defer innerArray.Release()
 
 	switch expr.ColumnType {
 	case catalog.ColumnTypeInt:
@@ -862,26 +879,34 @@ func (e *evaluator) evaluateColumnRef(expr *logical.ColumnRef, batch arrow.Recor
 
 	switch expr.ColumnType {
 	case catalog.ColumnTypeString:
+		ary := batch.Column(columnIndex).(*array.String)
+		ary.Retain()
 		return EvaluatedResponse{
-			array:        batch.Column(columnIndex).(*array.String),
+			array:        ary,
 			responseType: catalog.ColumnTypeString,
 			err:          nil,
 		}
 	case catalog.ColumnTypeInt:
+		ary := batch.Column(columnIndex).(*array.Int64)
+		ary.Retain()
 		return EvaluatedResponse{
-			array:        batch.Column(columnIndex).(*array.Int64),
+			array:        ary,
 			responseType: catalog.ColumnTypeInt,
 			err:          nil,
 		}
 	case catalog.ColumnTypeDouble:
+		ary := batch.Column(columnIndex).(*array.Float64)
+		ary.Retain()
 		return EvaluatedResponse{
-			array:        batch.Column(columnIndex).(*array.Float64),
+			array:        ary,
 			responseType: catalog.ColumnTypeDouble,
 			err:          nil,
 		}
 	case catalog.ColumnTypeBool:
+		ary := batch.Column(columnIndex).(*array.Boolean)
+		ary.Retain()
 		return EvaluatedResponse{
-			array:        batch.Column(columnIndex).(*array.Boolean),
+			array:        ary,
 			responseType: catalog.ColumnTypeBool,
 			err:          nil,
 		}

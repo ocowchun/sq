@@ -91,7 +91,7 @@ func (s *s3ObjectScan) Next(ctx context.Context) NextResponse {
 	keys := keyBuilder.NewArray()
 	defer keys.Release()
 	buckets := bucketNameBuilder.NewArray()
-	defer bucketNameBuilder.Release()
+	defer buckets.Release()
 	sizes := sizeBuilder.NewArray()
 	defer sizes.Release()
 	batch := array.NewRecordBatch(schema, []arrow.Array{keys, buckets, sizes}, int64(keys.Len()))
