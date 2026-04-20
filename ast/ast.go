@@ -55,8 +55,18 @@ type JoinType uint8
 const (
 	JoinTypeInnerJoin JoinType = iota
 	JoinTypeLeftJoin
-	JoinTypeRightJoin
 )
+
+func (t JoinType) String() string {
+	switch t {
+	case JoinTypeInnerJoin:
+		return "INNER JOIN"
+	case JoinTypeLeftJoin:
+		return "LEFT JOIN"
+	default:
+		panic("unknown JoinType")
+	}
+}
 
 type SearchCondition interface {
 	searchCondition()

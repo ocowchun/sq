@@ -59,3 +59,20 @@ func mergeBatches(batches []arrow.RecordBatch, allocator memory.Allocator) (arro
 	out := array.NewRecordBatch(schema, cols, totalRows)
 	return out, nil
 }
+
+func emptyBatch(schema *arrow.Schema, allocator memory.Allocator) arrow.RecordBatch {
+	cols := make([]arrow.Array, 0, len(schema.Fields()))
+	defer func() {
+		for _, col := range cols {
+			col.Release()
+		}
+	}()
+	for _, field := range schema.Fields() {
+		builder := array.NewBuilder(allocator, field.Type)
+		cols = append(cols, builder.NewArray())
+		builder.Release()
+	}
+
+	res := array.NewRecordBatch(schema, cols, 0)
+	return res
+}

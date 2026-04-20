@@ -42,15 +42,23 @@ func (o *orderBy) Open() error {
 	if err != nil {
 		return err
 	}
+	defer totalBatch.Release()
 
-	sortCols := make([]arrow.Array, len(o.orderings))
+	sortCols := make([]arrow.Array, 0, len(o.orderings))
+	defer func() {
+		for _, col := range sortCols {
+			col.Release()
+		}
+	}()
+
 	eval := newEvaluator(o.allocator)
-	for i, expr := range o.orderings {
+	for _, expr := range o.orderings {
 		exprRes := eval.evaluateExpr(expr.Expr, totalBatch)
 		if exprRes.err != nil {
 			return exprRes.err
 		}
-		sortCols[i] = exprRes.array
+		sortCols = append(sortCols, exprRes.array)
+		//sortCols[i] = exprRes.array
 	}
 
 	rows := make([]int, totalBatch.NumRows())

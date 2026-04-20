@@ -2,7 +2,6 @@ package physical
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/apache/arrow-go/v18/arrow"
 	"github.com/apache/arrow-go/v18/arrow/array"
@@ -44,11 +43,13 @@ func (j *loopJoin) Open() error {
 	if err != nil {
 		return err
 	}
+	defer leftBatch.Release()
 
 	rightBatch, err := drain(j.right, j.allocator)
 	if err != nil {
 		return err
 	}
+	defer rightBatch.Release()
 
 	batches := make([]arrow.RecordBatch, 0, int(leftBatch.NumRows()))
 	defer func() {
@@ -65,45 +66,70 @@ func (j *loopJoin) Open() error {
 	joinedFields = append(joinedFields, rightBatch.Schema().Fields()...)
 	joinedSchema := arrow.NewSchema(joinedFields, nil)
 
+	// fow now we only support inner join and left join, therefore joined become empty result if leftBatch is empty,
+	if leftBatch.NumRows() == 0 {
+		j.joined = emptyBatch(joinedSchema, j.allocator)
+		return nil
+	}
+
 	eval := newEvaluator(j.allocator)
 
 	for leftIndex := 0; leftIndex < int(leftBatch.NumRows()); leftIndex++ {
-		b, err := times(leftBatch, leftIndex, rightNumRows, j.allocator)
-		if err != nil {
-			return err
-		}
-		batch := array.NewRecordBatch(joinedSchema, append(b.Columns(), rightBatch.Columns()...), int64(rightNumRows))
-
-		mask, err := eval.evaluateSearchCondition(j.node.On, batch)
-		if err != nil {
-			return err
-		}
-
-		filtered, err := compute.FilterRecordBatch(
-			context.Background(),
-			batch,
-			mask,
-			compute.DefaultFilterOptions(),
-		)
-		if err != nil {
-			return err
-		}
-		switch j.node.Type {
-		case ast.JoinTypeInnerJoin:
-			batches = append(batches, filtered)
-		case ast.JoinTypeLeftJoin:
-			if filtered.NumRows() == 0 {
-				l, err := times(leftBatch, leftIndex, 1, j.allocator)
-				if err != nil {
-					return err
-				}
-				r := newSingleNullBatch(rightBatch, j.allocator)
-				batches = append(batches, array.NewRecordBatch(joinedSchema, append(l.Columns(), r.Columns()...), 1))
-			} else {
-				batches = append(batches, filtered)
+		err = func() error {
+			b, err := times(leftBatch, leftIndex, rightNumRows, j.allocator)
+			if err != nil {
+				return err
 			}
-		default:
-			return fmt.Errorf("unexpected join type: %v", j.node.Type)
+			defer b.Release()
+
+			batch := array.NewRecordBatch(joinedSchema, append(b.Columns(), rightBatch.Columns()...), int64(rightNumRows))
+			defer batch.Release()
+
+			mask, err := eval.evaluateSearchCondition(j.node.On, batch)
+			if err != nil {
+				return err
+			}
+			defer mask.Release()
+
+			filtered, err := compute.FilterRecordBatch(
+				context.Background(),
+				batch,
+				mask,
+				compute.DefaultFilterOptions(),
+			)
+			if err != nil {
+				return err
+			}
+			defer filtered.Release()
+
+			switch j.node.Type {
+			case ast.JoinTypeInnerJoin:
+				filtered.Retain()
+				batches = append(batches, filtered)
+			case ast.JoinTypeLeftJoin:
+				if filtered.NumRows() == 0 {
+					l, err := times(leftBatch, leftIndex, 1, j.allocator)
+					if err != nil {
+						return err
+					}
+					defer l.Release()
+
+					r := newSingleNullBatch(rightBatch, j.allocator)
+					defer r.Release()
+					batches = append(batches, array.NewRecordBatch(joinedSchema, append(l.Columns(), r.Columns()...), 1))
+
+				} else {
+					filtered.Retain()
+					batches = append(batches, filtered)
+				}
+			default:
+				panic("unknown joinType")
+			}
+			return nil
+		}()
+
+		if err != nil {
+			return err
 		}
 	}
 
