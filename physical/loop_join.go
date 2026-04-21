@@ -39,12 +39,18 @@ func (j *loopJoin) Open() error {
 	}
 
 	j.opened = true
+	if err := j.left.Open(); err != nil {
+		return err
+	}
 	leftBatch, err := drain(j.left, j.allocator)
 	if err != nil {
 		return err
 	}
 	defer leftBatch.Release()
 
+	if err := j.right.Open(); err != nil {
+		return err
+	}
 	rightBatch, err := drain(j.right, j.allocator)
 	if err != nil {
 		return err

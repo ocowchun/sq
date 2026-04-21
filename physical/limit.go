@@ -46,7 +46,6 @@ func (l *limit) Next(ctx context.Context) NextResponse {
 	}
 	defer innerRes.Batch.Release()
 
-	innerRes.Batch.NumRows()
 	n := min(innerRes.Batch.NumRows(), int64(l.count-l.current))
 	slice := innerRes.Batch.NewSlice(0, n)
 

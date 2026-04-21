@@ -38,6 +38,10 @@ func (o *orderBy) Open() error {
 	}
 	o.opened = true
 
+	if err := o.input.Open(); err != nil {
+		return err
+	}
+
 	totalBatch, err := drain(o.input, o.allocator)
 	if err != nil {
 		return err
