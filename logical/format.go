@@ -210,8 +210,6 @@ func formatJoinType(joinType ast.JoinType) string {
 		return "INNER"
 	case ast.JoinTypeLeftJoin:
 		return "LEFT"
-	case ast.JoinTypeRightJoin:
-		return "RIGHT"
 	default:
 		return fmt.Sprintf("JoinType(%d)", joinType)
 	}

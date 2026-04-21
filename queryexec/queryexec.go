@@ -35,20 +35,23 @@ func (e *QueryExec) Query(ctx context.Context, sql string) (*Iterator, error) {
 	}
 
 	state := physicalPlan.ExecutionState
-	for _, task := range physicalPlan.CTESetupTasks {
-		err = e.runCTESetupTasks(ctx, task, state)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	iter := &Iterator{
 		inner:   physicalPlan.Iterator,
 		hasNext: true,
 		state:   state,
 	}
+
+	for _, task := range physicalPlan.CTESetupTasks {
+		err = e.runCTESetupTask(ctx, task, state)
+		if err != nil {
+			iter.Close()
+			return nil, err
+		}
+	}
+
 	err = iter.inner.Open()
 	if err != nil {
+		iter.Close()
 		return nil, err
 	}
 
@@ -78,13 +81,23 @@ func (i *Iterator) Next(ctx context.Context) (arrow.RecordBatch, error) {
 	return innerRes.Batch, nil
 }
 
+// Close releases the physical iterator tree and query execution state.
+// It may be called during Query setup cleanup if the physical Open path fails
+// after partially opening resources.
 func (i *Iterator) Close() error {
-	return i.inner.Close()
+	err := i.inner.Close()
+	i.state.Close()
+	return err
 }
 
-func (e *QueryExec) runCTESetupTasks(ctx context.Context, task *physical.CTESetupTask, state *physical.ExecutionState) error {
-	// TODO: clean batch when error
+func (e *QueryExec) runCTESetupTask(ctx context.Context, task *physical.CTESetupTask, state *physical.ExecutionState) error {
 	batches := make([]arrow.RecordBatch, 0)
+	defer func() {
+		for _, batch := range batches {
+			batch.Release()
+		}
+	}()
+
 	err := task.Iterator.Open()
 	if err != nil {
 		return err
@@ -96,9 +109,12 @@ func (e *QueryExec) runCTESetupTasks(ctx context.Context, task *physical.CTESetu
 		if nextRes.Err != nil {
 			return nextRes.Err
 		}
-		if nextRes.Batch.NumRows() > 0 {
+		if nextRes.Batch.NumRows() == 0 {
+			nextRes.Batch.Release()
+		} else {
 			batches = append(batches, nextRes.Batch)
 		}
+
 		if !nextRes.HasNext {
 			break
 		}

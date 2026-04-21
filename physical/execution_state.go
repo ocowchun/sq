@@ -30,7 +30,7 @@ func (s *ExecutionState) GetCTE(name string) (*CTE, bool) {
 	return cte, ok
 }
 
-func (s *ExecutionState) RegisterCTE(name string, schema catalog.Schema, records []arrow.RecordBatch) error {
+func (s *ExecutionState) RegisterCTE(name string, schema catalog.Schema, batches []arrow.RecordBatch) error {
 	if s.isClosed {
 		panic("execution state is closed")
 	}
@@ -38,11 +38,19 @@ func (s *ExecutionState) RegisterCTE(name string, schema catalog.Schema, records
 	if _, ok := s.GetCTE(name); ok {
 		return fmt.Errorf("CTE '%s' already registered", name)
 	}
-	cte := &CTE{schema: schema, records: records}
+	cte := &CTE{schema: schema, records: batches}
+	for _, batch := range batches {
+		batch.Retain()
+	}
+
 	s.ctes[name] = cte
 	return nil
 }
-func (s *ExecutionState) Close() error {
+func (s *ExecutionState) Close() {
+	if s.isClosed {
+		return
+	}
+
 	s.isClosed = true
 
 	for _, cte := range s.ctes {
@@ -50,5 +58,4 @@ func (s *ExecutionState) Close() error {
 			batch.Release()
 		}
 	}
-	return nil
 }

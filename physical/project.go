@@ -43,6 +43,12 @@ func (p *project) Next(ctx context.Context) NextResponse {
 
 	fields := make([]arrow.Field, 0, len(p.selectExprs))
 	cols := make([]arrow.Array, 0, len(p.selectExprs))
+	defer func() {
+		for _, col := range cols {
+			col.Release()
+		}
+	}()
+
 	eval := newEvaluator(p.allocator)
 	for i, expr := range p.selectExprs {
 		fields = append(fields, arrow.Field{

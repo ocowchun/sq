@@ -17,9 +17,9 @@ type orderBy struct {
 	allocator memory.Allocator
 	input     Iterator
 	orderings []logical.Ordering
-	start     bool
 	sorted    arrow.RecordBatch
 	current   int64
+	opened    bool
 }
 
 func newOrderBy(input Iterator, orderings []logical.Ordering, allocator memory.Allocator) *orderBy {
@@ -27,31 +27,42 @@ func newOrderBy(input Iterator, orderings []logical.Ordering, allocator memory.A
 		allocator: allocator,
 		input:     input,
 		orderings: orderings,
-		start:     false,
 		current:   0,
+		opened:    false,
 	}
 }
 
 func (o *orderBy) Open() error {
-	o.start = true
-	err := o.input.Open()
-	if err != nil {
+	if o.opened {
+		panic("orderBy already open")
+	}
+	o.opened = true
+
+	if err := o.input.Open(); err != nil {
 		return err
 	}
 
-	totalBatch, err := o.drain()
+	totalBatch, err := drain(o.input, o.allocator)
 	if err != nil {
 		return err
 	}
+	defer totalBatch.Release()
 
-	sortCols := make([]arrow.Array, len(o.orderings))
+	sortCols := make([]arrow.Array, 0, len(o.orderings))
+	defer func() {
+		for _, col := range sortCols {
+			col.Release()
+		}
+	}()
+
 	eval := newEvaluator(o.allocator)
-	for i, expr := range o.orderings {
+	for _, expr := range o.orderings {
 		exprRes := eval.evaluateExpr(expr.Expr, totalBatch)
 		if exprRes.err != nil {
 			return exprRes.err
 		}
-		sortCols[i] = exprRes.array
+		sortCols = append(sortCols, exprRes.array)
+		//sortCols[i] = exprRes.array
 	}
 
 	rows := make([]int, totalBatch.NumRows())
@@ -171,30 +182,4 @@ func compare(ary arrow.Array, ordering logical.Ordering, left int, right int) in
 		res = -res
 	}
 	return res
-}
-
-func (o *orderBy) drain() (arrow.RecordBatch, error) {
-	batches := make([]arrow.RecordBatch, 0)
-	defer func() {
-		for _, b := range batches {
-			b.Release()
-		}
-	}()
-	ctx := context.Background()
-	for {
-		innerRes := o.input.Next(ctx)
-		if innerRes.Err != nil {
-			return nil, innerRes.Err
-		}
-		batches = append(batches, innerRes.Batch)
-		if !innerRes.HasNext {
-			break
-		}
-	}
-
-	merged, err := mergeBatches(batches, o.allocator)
-	if err != nil {
-		return nil, err
-	}
-	return merged, nil
 }
