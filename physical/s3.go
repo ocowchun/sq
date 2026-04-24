@@ -6,7 +6,7 @@ import (
 	"github.com/apache/arrow-go/v18/arrow"
 	"github.com/apache/arrow-go/v18/arrow/array"
 	"github.com/apache/arrow-go/v18/arrow/memory"
-	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/ocowchun/sq/catalog"
@@ -14,34 +14,28 @@ import (
 )
 
 type s3ObjectScan struct {
-	allocator memory.Allocator
-	//BucketName            string
-	//KeyPrefix             *string
-	//output                catalog.Schema
+	allocator             memory.Allocator
 	node                  *logical.S3ObjectScan
 	s3Client              *s3.Client
 	nextContinuationToken *string
 	hasNext               bool
 }
 
-func newS3ObjectScan(node *logical.S3ObjectScan, allocator memory.Allocator) *s3ObjectScan {
+func newS3ObjectScan(node *logical.S3ObjectScan, allocator memory.Allocator, awsConfig aws.Config) *s3ObjectScan {
 	// TODO: inject aws config later
-	loadOptions := make([]func(*config.LoadOptions) error, 0, 2)
-	ctx := context.Background()
-	awsCfg, err := config.LoadDefaultConfig(ctx, loadOptions...)
-	if err != nil {
-		panic(err)
-	}
+	//loadOptions := make([]func(*config.LoadOptions) error, 0, 2)
+	//ctx := context.Background()
+	//awsCfg, err := config.LoadDefaultConfig(ctx, loadOptions...)
+	//if err != nil {
+	//	panic(err)
+	//}
 
-	s3Client := s3.NewFromConfig(awsCfg)
+	s3Client := s3.NewFromConfig(awsConfig)
 	return &s3ObjectScan{
 		allocator: allocator,
 		node:      node,
-		//BucketName: node.BucketName,
-		//KeyPrefix:  node.KeyPrefix,
-		//output:     node.Schema(),
-		s3Client: s3Client,
-		hasNext:  true,
+		s3Client:  s3Client,
+		hasNext:   true,
 	}
 }
 

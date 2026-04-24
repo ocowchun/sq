@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/ocowchun/sq/queryexec"
 	"github.com/ocowchun/sq/shell"
 )
@@ -18,6 +19,7 @@ const VERSION = "v0.0.3"
 func main() {
 	versionFlag := flag.Bool("version", false, "print version and exit")
 	query := flag.String("e", "", "execute one SQL statement and exit")
+	profile := flag.String("profile", "", "aws profile")
 	flag.Parse()
 
 	if *versionFlag {
@@ -25,7 +27,18 @@ func main() {
 		return
 	}
 
-	engine := queryexec.New()
+	loadOptions := make([]func(*config.LoadOptions) error, 0)
+	ctx := context.Background()
+	if profile != nil && *profile != "" {
+		loadOptions = append(loadOptions, config.WithSharedConfigProfile(*profile))
+	}
+	awsConfig, err := config.LoadDefaultConfig(ctx, loadOptions...)
+	if err != nil {
+		fmt.Printf("failed to load aws config: %v\n", err)
+		os.Exit(1)
+	}
+
+	engine := queryexec.New(awsConfig)
 
 	if query != nil {
 		res := runQuery(engine, *query)

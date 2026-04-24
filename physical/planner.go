@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/apache/arrow-go/v18/arrow/memory"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/ocowchun/sq/catalog"
 	"github.com/ocowchun/sq/logical"
 )
@@ -20,18 +21,18 @@ type CTESetupTask struct {
 	Schema   catalog.Schema
 }
 
-func BuildPlan(logicalPlan logical.Node, allocator memory.Allocator) (*Plan, error) {
+func BuildPlan(logicalPlan logical.Node, allocator memory.Allocator, awsConfig aws.Config) (*Plan, error) {
 	state := newExecutionState()
 
-	return buildIterator(logicalPlan, state, allocator)
+	return buildIterator(logicalPlan, state, allocator, awsConfig)
 }
 
-func buildIterator(logicalPlan logical.Node, state *ExecutionState, allocator memory.Allocator) (*Plan, error) {
+func buildIterator(logicalPlan logical.Node, state *ExecutionState, allocator memory.Allocator, awsConfig aws.Config) (*Plan, error) {
 	switch node := logicalPlan.(type) {
 	case *logical.Statement:
 		tasks := make([]*CTESetupTask, 0, len(node.CTEs))
 		for _, cte := range node.CTEs {
-			subPlan, err := buildIterator(cte.Query, state, allocator)
+			subPlan, err := buildIterator(cte.Query, state, allocator, awsConfig)
 			if err != nil {
 				return nil, err
 			}
@@ -45,7 +46,7 @@ func buildIterator(logicalPlan logical.Node, state *ExecutionState, allocator me
 			}
 			tasks = append(tasks, task)
 		}
-		subPlan, err := buildIterator(node.Root, state, allocator)
+		subPlan, err := buildIterator(node.Root, state, allocator, awsConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -67,11 +68,11 @@ func buildIterator(logicalPlan logical.Node, state *ExecutionState, allocator me
 	case *logical.S3ObjectScan:
 		return &Plan{
 			CTESetupTasks:  make([]*CTESetupTask, 0),
-			Iterator:       newS3ObjectScan(node, allocator),
+			Iterator:       newS3ObjectScan(node, allocator, awsConfig),
 			ExecutionState: state,
 		}, nil
 	case *logical.Filter:
-		subPlan, err := buildIterator(node.Input, state, allocator)
+		subPlan, err := buildIterator(node.Input, state, allocator, awsConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +83,7 @@ func buildIterator(logicalPlan logical.Node, state *ExecutionState, allocator me
 			ExecutionState: state,
 		}, nil
 	case *logical.Project:
-		subPlan, err := buildIterator(node.Input, state, allocator)
+		subPlan, err := buildIterator(node.Input, state, allocator, awsConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -93,11 +94,11 @@ func buildIterator(logicalPlan logical.Node, state *ExecutionState, allocator me
 			ExecutionState: state,
 		}, nil
 	case *logical.Join:
-		left, err := buildIterator(node.Left, state, allocator)
+		left, err := buildIterator(node.Left, state, allocator, awsConfig)
 		if err != nil {
 			return nil, err
 		}
-		right, err := buildIterator(node.Right, state, allocator)
+		right, err := buildIterator(node.Right, state, allocator, awsConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -114,7 +115,7 @@ func buildIterator(logicalPlan logical.Node, state *ExecutionState, allocator me
 			ExecutionState: state,
 		}, nil
 	case *logical.Limit:
-		subPlan, err := buildIterator(node.Input, state, allocator)
+		subPlan, err := buildIterator(node.Input, state, allocator, awsConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +125,7 @@ func buildIterator(logicalPlan logical.Node, state *ExecutionState, allocator me
 			ExecutionState: state,
 		}, nil
 	case *logical.OrderBy:
-		subPlan, err := buildIterator(node.Input, state, allocator)
+		subPlan, err := buildIterator(node.Input, state, allocator, awsConfig)
 		if err != nil {
 			return nil, err
 		}
