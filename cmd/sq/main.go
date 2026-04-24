@@ -18,13 +18,19 @@ const VERSION = "v0.0.4"
 
 func main() {
 	versionFlag := flag.Bool("version", false, "print version and exit")
-	query := flag.String("e", "", "execute one SQL statement and exit")
 	profile := flag.String("profile", "", "aws profile")
 	flag.Parse()
 
 	if *versionFlag {
 		fmt.Printf("sq %s\n", VERSION)
 		return
+	}
+
+	args := flag.Args()
+	if len(args) > 1 {
+		fmt.Fprintln(os.Stderr, "expected exactly one SQL query argument")
+		fmt.Fprintln(os.Stderr, `usage: sq [flags] '<sql query>'`)
+		os.Exit(1)
 	}
 
 	loadOptions := make([]func(*config.LoadOptions) error, 0)
@@ -40,8 +46,8 @@ func main() {
 
 	engine := queryexec.New(awsConfig)
 
-	if query != nil {
-		res := runQuery(engine, *query)
+	if len(args) == 1 {
+		res := runQuery(engine, args[0])
 		if res.Error != nil {
 			fmt.Println(res.Error)
 			os.Exit(1)
