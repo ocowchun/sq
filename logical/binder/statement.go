@@ -1,6 +1,9 @@
 package binder
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/ocowchun/sq/ast"
 	"github.com/ocowchun/sq/catalog"
 )
@@ -40,6 +43,7 @@ type SelectExpr struct {
 type Expr interface {
 	exprNode()
 	Type() catalog.ColumnType
+	String() string
 }
 
 type Table struct {
@@ -71,6 +75,23 @@ func (literal *Literal) Type() catalog.ColumnType {
 	return literal.LiteralType
 }
 
+func (literal *Literal) String() string {
+	switch literal.LiteralType {
+	case catalog.ColumnTypeInt:
+		return fmt.Sprintf("%d", literal.Value.(int64))
+	case catalog.ColumnTypeDouble:
+		return fmt.Sprintf("%f", literal.Value.(float64))
+	case catalog.ColumnTypeString:
+		return fmt.Sprintf("%q", literal.Value.(string))
+	case catalog.ColumnTypeBool:
+		return fmt.Sprintf("%t", literal.Value.(bool))
+	case catalog.ColumnTypeNull:
+		return "NULL"
+	default:
+		return fmt.Sprintf("%v", literal.LiteralType)
+	}
+}
+
 type ColumnRef struct {
 	TableName   string
 	TableAlias  string
@@ -82,6 +103,9 @@ type ColumnRef struct {
 func (c *ColumnRef) exprNode() {}
 func (c *ColumnRef) Type() catalog.ColumnType {
 	return c.ColumnType
+}
+func (c *ColumnRef) String() string {
+	return c.ColumnName
 }
 
 type UnaryExpr struct {
@@ -95,6 +119,10 @@ func (e *UnaryExpr) Type() catalog.ColumnType {
 	return e.ColumnType
 }
 
+func (e *UnaryExpr) String() string {
+	return fmt.Sprintf("-%s", e.Expr.String())
+}
+
 type BinaryExpr struct {
 	Operator   ast.BinaryOp
 	Left       Expr
@@ -106,6 +134,15 @@ func (e *BinaryExpr) exprNode() {}
 func (e *BinaryExpr) Type() catalog.ColumnType {
 	return e.ColumnType
 }
+func (e *BinaryExpr) String() string {
+	var sb strings.Builder
+	sb.WriteString(e.Left.String())
+	sb.WriteString(" ")
+	sb.WriteString(e.Operator.String())
+	sb.WriteString(" ")
+	sb.WriteString(e.Right.String())
+	return sb.String()
+}
 
 type CallExpr struct {
 	Callee     string
@@ -116,6 +153,19 @@ type CallExpr struct {
 func (e *CallExpr) exprNode() {}
 func (e *CallExpr) Type() catalog.ColumnType {
 	return e.ColumnType
+}
+func (e *CallExpr) String() string {
+	var sb strings.Builder
+	sb.WriteString(e.Callee)
+	sb.WriteString("(")
+	for i, arg := range e.Args {
+		sb.WriteString(arg.String())
+		if i < len(e.Args)-1 {
+			sb.WriteString(", ")
+		}
+	}
+	sb.WriteString(")")
+	return sb.String()
 }
 
 type SearchCondition interface {

@@ -29,6 +29,32 @@ const (
 func (op BinaryOp) IsIn(ops ...BinaryOp) bool {
 	return slices.Contains(ops, op)
 }
+func (op BinaryOp) String() string {
+	switch op {
+	case BinaryOpAdd:
+		return "+"
+	case BinaryOpSub:
+		return "-"
+	case BinaryOpMul:
+		return "*"
+	case BinaryOpDiv:
+		return "/"
+	case BinaryOpEqual:
+		return "=="
+	case BinaryOpNotEqual:
+		return "!="
+	case BinaryOpGreater:
+		return ">"
+	case BinaryOpGreaterEqual:
+		return ">="
+	case BinaryOpLess:
+		return "<"
+	case BinaryOpLessEqual:
+		return "<="
+	default:
+		panic("unreachable")
+	}
+}
 
 type IdentifierExpr struct {
 	Pos  token.Position

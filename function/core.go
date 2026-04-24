@@ -66,4 +66,8 @@ func GetFunction(name string) (Function, bool) {
 func init() {
 	_env.functions["split_part"] = &splitPart{}
 	_env.functions["replace"] = &replace{}
+	_env.functions["length"] = &length{}
+	_env.functions["lower"] = &lower{}
+	_env.functions["upper"] = &upper{}
+	_env.functions["substring"] = &substring{}
 }

@@ -65,6 +65,36 @@ where bucket_name = "my-bucket" and key like "logs/%"
 '
 ```
 
+Normalize key casing and inspect key length:
+
+```sh
+sq '
+select lower(key) as lower_key, upper(key) as upper_key, length(key) as key_len
+from objects
+where bucket_name = "my-bucket"
+'
+```
+
+Take a substring from a byte index to the end:
+
+```sh
+sq '
+select key, substring(key, 5) as suffix
+from objects
+where bucket_name = "my-bucket"
+'
+```
+
+Concatenate strings with `+`:
+
+```sh
+sq '
+select "s3://" + bucket_name + "/" + key as uri
+from objects
+where bucket_name = "my-bucket"
+'
+```
+
 Use a CTE:
 
 ```sh
@@ -97,6 +127,7 @@ These are the SQL features you can use in queries today:
 - `select ... from ...`
 - column aliases with `as`
 - `where`
+- `+` for numeric addition and string concatenation
 - comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=`
 - boolean operators: `and`, `or`
 - `like`
@@ -105,6 +136,10 @@ These are the SQL features you can use in queries today:
 - `with` common table expressions
 - joins: `inner join` and `left join`
 - scalar text functions:
+  - `length(string)`
+  - `lower(string)`
+  - `upper(string)`
+  - `substring(string, start)`
   - `split_part(string, separator, index)`
   - `replace(string, source, target)`
 

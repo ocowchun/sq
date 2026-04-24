@@ -201,7 +201,7 @@ func exprName(expr Expr) string {
 	case *ColumnRef:
 		return e.ColumnName
 	default:
-		return fmt.Sprintf("%T", expr)
+		return fmt.Sprintf("%s", expr)
 	}
 }
 

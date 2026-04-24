@@ -144,7 +144,21 @@ func (b *exprBinder) bindBinaryExpr(expr *ast.BinaryExpr) (Expr, error) {
 	}
 
 	switch expr.Operator {
-	case ast.BinaryOpAdd, ast.BinaryOpSub, ast.BinaryOpMul, ast.BinaryOpDiv:
+	case ast.BinaryOpAdd:
+		if left.Type() == catalog.ColumnTypeString && right.Type() != catalog.ColumnTypeString {
+			return nil, newBindError(expr.Position(), "right operand is not a string")
+		}
+
+		if left.Type() == catalog.ColumnTypeInt && right.Type() != catalog.ColumnTypeInt {
+			return nil, newBindError(expr.Position(), "right operand is not an integer")
+		}
+		return &BinaryExpr{
+			Operator:   expr.Operator,
+			Left:       left,
+			Right:      right,
+			ColumnType: left.Type(),
+		}, nil
+	case ast.BinaryOpSub, ast.BinaryOpMul, ast.BinaryOpDiv:
 		if left.Type() != catalog.ColumnTypeInt {
 			return nil, newBindError(expr.Position(), "left operand is not an integer")
 		}
