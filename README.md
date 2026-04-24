@@ -23,16 +23,16 @@ go install github.com/ocowchun/sq/cmd/sq@latest
 same environment variables, shared config files, and credential files you already use with the
 AWS CLI.
 
-Run a query with `-e`:
+Run a query by passing the SQL as a single argument:
 
 ```sh
-sq -e 'select key, size from objects where bucket_name = "my-bucket"'
+sq 'select key, size from objects where bucket_name = "my-bucket"'
 ```
 
 Use a specific AWS profile when needed:
 
 ```sh
-sq -profile my-profile -e 'select key, size from objects where bucket_name = "my-bucket"'
+sq -profile my-profile 'select key, size from objects where bucket_name = "my-bucket"'
 ```
 
 ## Example Queries
@@ -40,25 +40,25 @@ sq -profile my-profile -e 'select key, size from objects where bucket_name = "my
 List objects in a bucket:
 
 ```sh
-sq -e 'select key, size from objects where bucket_name = "my-bucket"'
+sq 'select key, size from objects where bucket_name = "my-bucket"'
 ```
 
 Filter to a prefix:
 
 ```sh
-sq -e 'select key, size from objects where bucket_name = "my-bucket" and key like "logs/%"'
+sq 'select key, size from objects where bucket_name = "my-bucket" and key like "logs/%"'
 ```
 
 Find larger objects:
 
 ```sh
-sq -e 'select key, size from objects where bucket_name = "my-bucket" and size > 1048576'
+sq 'select key, size from objects where bucket_name = "my-bucket" and size > 1048576'
 ```
 
 Rewrite part of a key in the output:
 
 ```sh
-sq -e '
+sq '
 select replace(key, "logs/", "") as short_key, size
 from objects
 where bucket_name = "my-bucket" and key like "logs/%"
@@ -68,7 +68,7 @@ where bucket_name = "my-bucket" and key like "logs/%"
 Use a CTE:
 
 ```sh
-sq -e '
+sq '
 with log_files as (
   select key, size
   from objects
@@ -110,7 +110,7 @@ These are the SQL features you can use in queries today:
 
 ## Interactive Mode
 
-Run `sq` without `-e` to start the interactive shell:
+Run `sq` with no SQL argument to start the interactive shell:
 
 ```sh
 sq
