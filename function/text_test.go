@@ -155,3 +155,34 @@ func Test_Upper(t *testing.T) {
 		t.Errorf("Unexpected result %s, expected: %s", val, "FREEDOM OF SPEECH")
 	}
 }
+
+func Test_Substring(t *testing.T) {
+	fun, _ := GetFunction("substring")
+
+	res, err := fun.Run([]*Value{
+		{
+			Value:     "Faint",
+			ValueType: catalog.ColumnTypeString,
+			IsNull:    false,
+		},
+		{
+			Value:     int64(2),
+			ValueType: catalog.ColumnTypeInt,
+			IsNull:    false,
+		},
+	})
+
+	if err != nil {
+		t.Errorf("Unexpected error %v", err)
+	}
+	if res.ValueType != fun.Output() {
+		t.Errorf("Unexpected ValueType %s, expected %s", res.ValueType, fun.Output())
+	}
+	val, ok := res.Value.(string)
+	if !ok {
+		t.Errorf("Unexpected result %v, expected: string", res)
+	}
+	if val != "int" {
+		t.Errorf("Unexpected result %s, expected: %s", val, "int")
+	}
+}

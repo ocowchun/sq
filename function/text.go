@@ -169,3 +169,38 @@ func (f *upper) Run(args []*Value) (*Value, error) {
 	}
 	return ret, nil
 }
+
+type substring struct {
+}
+
+func (f *substring) Input() []catalog.ColumnType {
+	return []catalog.ColumnType{
+		catalog.ColumnTypeString,
+		catalog.ColumnTypeInt,
+	}
+}
+
+func (f *substring) Output() catalog.ColumnType {
+	return catalog.ColumnTypeString
+}
+
+func (f *substring) Run(args []*Value) (*Value, error) {
+	str, err := extractString(args, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	start, err := extractInt(args, 1)
+	if err != nil {
+		return nil, err
+	}
+	if start < 0 {
+		return nil, fmt.Errorf("start must greater than or equal 0, but get %d", start)
+	}
+
+	ret := &Value{
+		Value:     str[start:],
+		ValueType: catalog.ColumnTypeString,
+	}
+	return ret, nil
+}

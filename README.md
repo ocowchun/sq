@@ -75,6 +75,26 @@ where bucket_name = "my-bucket"
 '
 ```
 
+Take a substring from a byte index to the end:
+
+```sh
+sq '
+select key, substring(key, 5) as suffix
+from objects
+where bucket_name = "my-bucket"
+'
+```
+
+Concatenate strings with `+`:
+
+```sh
+sq '
+select "s3://" + bucket_name + "/" + key as uri
+from objects
+where bucket_name = "my-bucket"
+'
+```
+
 Use a CTE:
 
 ```sh
@@ -107,6 +127,7 @@ These are the SQL features you can use in queries today:
 - `select ... from ...`
 - column aliases with `as`
 - `where`
+- `+` for numeric addition and string concatenation
 - comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=`
 - boolean operators: `and`, `or`
 - `like`
@@ -118,6 +139,7 @@ These are the SQL features you can use in queries today:
   - `length(string)`
   - `lower(string)`
   - `upper(string)`
+  - `substring(string, start)`
   - `split_part(string, separator, index)`
   - `replace(string, source, target)`
 

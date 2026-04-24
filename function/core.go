@@ -69,4 +69,5 @@ func init() {
 	_env.functions["length"] = &length{}
 	_env.functions["lower"] = &lower{}
 	_env.functions["upper"] = &upper{}
+	_env.functions["substring"] = &substring{}
 }
