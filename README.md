@@ -65,6 +65,16 @@ where bucket_name = "my-bucket" and key like "logs/%"
 '
 ```
 
+Normalize key casing and inspect key length:
+
+```sh
+sq '
+select lower(key) as lower_key, upper(key) as upper_key, length(key) as key_len
+from objects
+where bucket_name = "my-bucket"
+'
+```
+
 Use a CTE:
 
 ```sh
@@ -105,6 +115,9 @@ These are the SQL features you can use in queries today:
 - `with` common table expressions
 - joins: `inner join` and `left join`
 - scalar text functions:
+  - `length(string)`
+  - `lower(string)`
+  - `upper(string)`
   - `split_part(string, separator, index)`
   - `replace(string, source, target)`
 

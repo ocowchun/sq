@@ -90,3 +90,82 @@ func (f *replace) Run(args []*Value) (*Value, error) {
 	}
 	return ret, nil
 }
+
+// length(string)
+type length struct {
+}
+
+func (f *length) Input() []catalog.ColumnType {
+	return []catalog.ColumnType{
+		catalog.ColumnTypeString,
+	}
+}
+
+func (f *length) Output() catalog.ColumnType {
+	return catalog.ColumnTypeInt
+}
+
+func (f *length) Run(args []*Value) (*Value, error) {
+	str, err := extractString(args, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := &Value{
+		Value:     int64(len(str)),
+		ValueType: catalog.ColumnTypeInt,
+	}
+	return ret, nil
+}
+
+type lower struct {
+}
+
+func (f *lower) Input() []catalog.ColumnType {
+	return []catalog.ColumnType{
+		catalog.ColumnTypeString,
+	}
+}
+
+func (f *lower) Output() catalog.ColumnType {
+	return catalog.ColumnTypeString
+}
+
+func (f *lower) Run(args []*Value) (*Value, error) {
+	str, err := extractString(args, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := &Value{
+		Value:     strings.ToLower(str),
+		ValueType: catalog.ColumnTypeString,
+	}
+	return ret, nil
+}
+
+type upper struct {
+}
+
+func (f *upper) Input() []catalog.ColumnType {
+	return []catalog.ColumnType{
+		catalog.ColumnTypeString,
+	}
+}
+
+func (f *upper) Output() catalog.ColumnType {
+	return catalog.ColumnTypeString
+}
+
+func (f *upper) Run(args []*Value) (*Value, error) {
+	str, err := extractString(args, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := &Value{
+		Value:     strings.ToUpper(str),
+		ValueType: catalog.ColumnTypeString,
+	}
+	return ret, nil
+}
