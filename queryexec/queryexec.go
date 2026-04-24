@@ -6,6 +6,7 @@ import (
 
 	"github.com/apache/arrow-go/v18/arrow"
 	"github.com/apache/arrow-go/v18/arrow/memory"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/ocowchun/sq/catalog"
 	"github.com/ocowchun/sq/logical"
 	"github.com/ocowchun/sq/physical"
@@ -14,12 +15,14 @@ import (
 type QueryExec struct {
 	catalog   *catalog.Catalog
 	allocator memory.Allocator
+	awsConfig aws.Config
 }
 
-func New() *QueryExec {
+func New(awsConfig aws.Config) *QueryExec {
 	return &QueryExec{
 		catalog:   catalog.New(),
 		allocator: memory.NewGoAllocator(),
+		awsConfig: awsConfig,
 	}
 }
 
@@ -29,7 +32,7 @@ func (e *QueryExec) Query(ctx context.Context, sql string) (*Iterator, error) {
 		return nil, err
 	}
 
-	physicalPlan, err := physical.BuildPlan(logicalPlan, e.allocator)
+	physicalPlan, err := physical.BuildPlan(logicalPlan, e.allocator, e.awsConfig)
 	if err != nil {
 		return nil, err
 	}

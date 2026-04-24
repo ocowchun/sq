@@ -1,38 +1,68 @@
 # sq
 
-`sq` is a SQL-first tool for exploring objects in Amazon S3.
+`sq` is a CLI for exploring Amazon S3 objects with SQL. It is still early-stage software, so
+the interface and supported queries may change, but it is already useful for everyday S3
+inspection.
 
-The problem it is trying to solve is simple: S3 is easy to store data in, but awkward to
-inspect at speed. When you need to answer questions like "what large files are under this
-prefix?" or "which keys match this pattern?", `aws s3 ls` and shell pipelines get tedious
-fast. `sq` aims to make that workflow feel more like querying a table.
+Instead of stitching together `aws s3 ls`, `grep`, and shell pipelines, you can query S3
+objects as rows in a table. That makes it easier to answer questions like:
 
-## Why `sq`
+- what objects exist under a prefix?
+- which files are larger than a threshold?
+- how can I reshape keys before exporting results?
 
-The intended use case is day-to-day S3 exploration:
-
-- inspect objects in a bucket without switching mental models
-- filter by bucket, prefix, size, or simple string patterns
-- reshape output with projections and aliases
-
-## CLI Usage
-
-Install the CLI:
+## Install
 
 ```sh
 go install github.com/ocowchun/sq/cmd/sq@latest
 ```
 
-Execute a query:
+## Getting Started
+
+`sq` uses the normal AWS SDK credential and config loading flow. That means it works with the
+same environment variables, shared config files, and credential files you already use with the
+AWS CLI.
+
+Run a query with `-e`:
 
 ```sh
-sq -e 'select key, size from objects where bucket_name = "my-bucket" and key like "logs/%"'
+sq -e 'select key, size from objects where bucket_name = "my-bucket"'
+```
+
+Use a specific AWS profile when needed:
+
+```sh
+sq -profile my-profile -e 'select key, size from objects where bucket_name = "my-bucket"'
+```
+
+## Example Queries
+
+List objects in a bucket:
+
+```sh
+sq -e 'select key, size from objects where bucket_name = "my-bucket"'
 ```
 
 Filter to a prefix:
 
 ```sh
 sq -e 'select key, size from objects where bucket_name = "my-bucket" and key like "logs/%"'
+```
+
+Find larger objects:
+
+```sh
+sq -e 'select key, size from objects where bucket_name = "my-bucket" and size > 1048576'
+```
+
+Rewrite part of a key in the output:
+
+```sh
+sq -e '
+select replace(key, "logs/", "") as short_key, size
+from objects
+where bucket_name = "my-bucket" and key like "logs/%"
+'
 ```
 
 Use a CTE:
@@ -44,79 +74,49 @@ with log_files as (
   from objects
   where bucket_name = "my-bucket" and key like "logs/%"
 )
-select replace(key, "logs/", "") as short_key, size
+select key, size
 from log_files
+where size > 1048576
 '
 ```
 
-The `sq` file also contains an interactive shell path with these behaviors:
+## The `objects` Table
 
-- statements are submitted when they end with `;`
-- dot commands begin with `.`
-- `.mode table`, `.mode line`, and `.mode csv` switch output formatting
+Queries currently read from a built-in table named `objects`.
 
-## What Works Today
+| column | type | meaning |
+| --- | --- | --- |
+| `key` | `string` | S3 object key |
+| `bucket_name` | `string` | S3 bucket name |
+| `size` | `int` | object size in bytes |
 
-The current codebase is best understood as an in-progress query engine for S3 object listing.
+## Supported SQL Features
 
-The engine currently has a built-in `objects` table with this schema:
-
-| column | type |
-| --- | --- |
-| `key` | `string` |
-| `bucket_name` | `string` |
-| `size` | `int` |
-
-Under the hood, the S3 scan uses AWS SDK default configuration loading, so normal AWS
-environment variables, shared config files, and standard credential resolution apply.
-
-### SQL Features Verified In The Current Code
-
-The following features are present in parser/planner/tests today:
+These are the SQL features you can use in queries today:
 
 - `select ... from ...`
 - column aliases with `as`
 - `where`
-- `=`, `!=`, `>`, `>=`, `<`, `<=`
-- `and`, `or`
+- comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=`
+- boolean operators: `and`, `or`
 - `like`
 - `is null`
 - `in`
 - `with` common table expressions
-- joins in the parser and logical planner
+- joins: `inner join` and `left join`
 - scalar text functions:
   - `split_part(string, separator, index)`
   - `replace(string, source, target)`
 
-Some of these features are farther along than others. The README examples stay close to the
-S3 object workflow that is already visible in the implementation.
+## Interactive Mode
 
+Run `sq` without `-e` to start the interactive shell:
 
-## How It Works
+```sh
+sq
+```
 
-At a high level, the flow is:
+In interactive mode:
 
-1. parse SQL into an AST
-2. bind names and types against the catalog
-3. build a logical plan
-4. run logical optimization
-5. build a physical plan
-6. execute against Arrow record batches
-7. fetch S3 objects through the AWS SDK when scanning the `objects` table
-
-Key packages:
-
-- `parser`: lexer and parser
-- `logical`: binding, logical plan construction, optimization
-- `physical`: execution operators and S3 scan
-- `queryexec`: high-level query entry point
-- `function`: built-in scalar functions
-- `catalog`: table metadata
-- `cmd/sq`: current CLI entry point
-
-## Project Status
-This is still early-stage software. The important distinction is:
-
-- the query engine direction is real and already implemented in pieces
-- the CLI entry point exists, but the overall workflow is still early and evolving
-
+- submit a statement by ending it with `;`
+- switch output format with `.mode table`, `.mode line`, or `.mode csv`
