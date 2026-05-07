@@ -165,7 +165,7 @@ func (p *Parser) parseSelectStatement() (*ast.SelectStatement, error) {
 		if err != nil {
 			return nil, err
 		}
-		// TODO: handle as
+
 		selectExprs = append(selectExprs, expr)
 		if p.currentTokenIs(token.TokenTypeComma) {
 			p.advance()
@@ -176,7 +176,7 @@ func (p *Parser) parseSelectStatement() (*ast.SelectStatement, error) {
 	}
 
 	if len(selectExprs) == 0 {
-		return nil, newParserError(p.currentToken().Pos, fmt.Sprintf("expected at least one select expression"))
+		return nil, newParserError(p.currentToken().Pos, "expected at least one select expression")
 	}
 
 	from, err := p.parseFrom()
